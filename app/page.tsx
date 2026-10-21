@@ -813,7 +813,7 @@ function updateSimulated(
     .slice(0, 10);
 
   link.href = url;
-  link.download = `logsim-pro-backup-${date}.json`;
+  link.download = `cenarilog-academy-backup-${date}.json`;
 
   document.body.appendChild(link);
   link.click();
@@ -937,7 +937,7 @@ function importJson(
         !isTargets(parsed.targets)
       ) {
         throw new Error(
-          "O arquivo não possui dados válidos do LogSim Pro."
+          "O arquivo não possui dados válidos do CenariLog Academy."
         );
       }
 
@@ -1069,11 +1069,11 @@ function importJson(
 
             <div>
               <h1 className="text-3xl font-bold tracking-tight">
-                LogSim Pro
+                CenariLog Academy
               </h1>
 
               <p className="mt-1 text-sm text-slate-300">
-                Simulador pessoal de indicadores logísticos
+                Aprenda logística simulando decisões.
               </p>
             </div>
           </div>
@@ -1845,7 +1845,7 @@ function importJson(
 
     <div>
       <h2 className="text-xl font-bold">
-        Backup do LogSim Pro
+        Backup do CenariLog Academy
       </h2>
 
       <p className="text-sm text-slate-500">
@@ -1944,7 +1944,7 @@ function importJson(
         </section>
 
         <footer className="py-8 text-center text-sm text-slate-500">
-          LogSim Pro · Simulador pessoal de logística
+          CenariLog Academy · Aprenda logística simulando decisões.
         </footer>
       </div>
     </main>
