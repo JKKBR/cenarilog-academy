@@ -31,6 +31,8 @@ import {
   YAxis,
 } from "recharts";
 
+import ProductsModule from "@/components/ProductsModule";
+
 type OperationData = {
   demanda: number;
   estoqueMedio: number;
@@ -1877,7 +1879,9 @@ function importJson(
     O arquivo inclui operação atual, cenário simulado,
     metas, observações e cenários salvos.
   </p>
-</section>
+  </section>
+  
+  <ProductsModule />
 
         <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-xl font-bold">
