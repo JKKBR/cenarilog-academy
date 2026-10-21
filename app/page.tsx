@@ -15,6 +15,10 @@ import {
   TriangleAlert,
   Truck,
   Warehouse,
+  AlertCircle,
+  Download,
+  FileJson,
+  Upload,
 } from "lucide-react";
 import {
   Bar,
@@ -39,6 +43,10 @@ type OperationData = {
   itensConferidos: number;
   itensCorretos: number;
   custoLogistico: number;
+  demandaDiariaMedia: number;
+  demandaDiariaMaxima: number;
+  leadTimeMaximo: number;
+  estoqueDisponivel: number;
 };
 
 type Targets = {
@@ -59,12 +67,27 @@ type KPIResults = {
   leadTime: number;
   acuracidade: number;
   custoPorPedido: number;
+  estoqueSeguranca: number;
+  demandaDuranteLeadTime: number;
+  pontoReposicao: number;
+  precisaRepor: boolean;
 };
 
 type SavedScenario = {
   nome: string;
   data: string;
   operation: OperationData;
+};
+
+type LogSimBackup = {
+  version: 1;
+  exportedAt: string;
+  current: OperationData;
+  simulated: OperationData;
+  targets: Targets;
+  scenarioName: string;
+  observations: string;
+  savedScenarios: SavedScenario[];
 };
 
 const initialCurrent: OperationData = {
@@ -79,6 +102,10 @@ const initialCurrent: OperationData = {
   itensConferidos: 1000,
   itensCorretos: 970,
   custoLogistico: 24000,
+  demandaDiariaMedia: 180,
+  demandaDiariaMaxima: 240,
+  leadTimeMaximo: 10,
+  estoqueDisponivel: 1600,
 };
 
 const initialSimulated: OperationData = {
@@ -93,6 +120,10 @@ const initialSimulated: OperationData = {
   itensConferidos: 1000,
   itensCorretos: 990,
   custoLogistico: 26000,
+  demandaDiariaMedia: 190,
+  demandaDiariaMaxima: 230,
+  leadTimeMaximo: 7,
+  estoqueDisponivel: 1800,
 };
 
 const initialTargets: Targets = {
@@ -118,13 +149,22 @@ function safeDivide(numerator: number, denominator: number) {
 
 function calculateKPIs(data: OperationData): KPIResults {
   const otif =
-    safeDivide(data.pedidosCompletosNoPrazo, data.pedidosTotais) * 100;
+    safeDivide(
+      data.pedidosCompletosNoPrazo,
+      data.pedidosTotais
+    ) * 100;
 
   const otd =
-    safeDivide(data.pedidosNoPrazo, data.pedidosTotais) * 100;
+    safeDivide(
+      data.pedidosNoPrazo,
+      data.pedidosTotais
+    ) * 100;
 
   const fillRate =
-    safeDivide(data.unidadesAtendidas, data.unidadesSolicitadas) * 100;
+    safeDivide(
+      data.unidadesAtendidas,
+      data.unidadesSolicitadas
+    ) * 100;
 
   const ruptura = Math.max(
     0,
@@ -134,15 +174,36 @@ function calculateKPIs(data: OperationData): KPIResults {
     ) * 100
   );
 
-  const giro = safeDivide(data.demanda, data.estoqueMedio);
+  const giro = safeDivide(
+    data.demanda,
+    data.estoqueMedio
+  );
 
   const acuracidade =
-    safeDivide(data.itensCorretos, data.itensConferidos) * 100;
+    safeDivide(
+      data.itensCorretos,
+      data.itensConferidos
+    ) * 100;
 
   const custoPorPedido = safeDivide(
     data.custoLogistico,
     data.pedidosTotais
   );
+
+  const demandaDuranteLeadTime =
+    data.demandaDiariaMedia * data.leadTime;
+
+  const estoqueSeguranca = Math.max(
+    0,
+    data.demandaDiariaMaxima * data.leadTimeMaximo -
+      data.demandaDiariaMedia * data.leadTime
+  );
+
+  const pontoReposicao =
+    demandaDuranteLeadTime + estoqueSeguranca;
+
+  const precisaRepor =
+    data.estoqueDisponivel <= pontoReposicao;
 
   return {
     otif,
@@ -153,7 +214,91 @@ function calculateKPIs(data: OperationData): KPIResults {
     leadTime: data.leadTime,
     acuracidade,
     custoPorPedido,
+    estoqueSeguranca,
+    demandaDuranteLeadTime,
+    pontoReposicao,
+    precisaRepor,
   };
+}
+function validateOperation(
+  data: OperationData,
+  title: string
+) {
+  const errors: string[] = [];
+
+  if (data.pedidosNoPrazo > data.pedidosTotais) {
+    errors.push(
+      `${title}: pedidos entregues no prazo não podem superar o total de pedidos.`
+    );
+  }
+
+  if (
+    data.pedidosCompletosNoPrazo >
+    data.pedidosNoPrazo
+  ) {
+    errors.push(
+      `${title}: pedidos completos no prazo não podem superar os pedidos entregues no prazo.`
+    );
+  }
+
+  if (
+    data.pedidosCompletosNoPrazo >
+    data.pedidosTotais
+  ) {
+    errors.push(
+      `${title}: pedidos completos no prazo não podem superar o total de pedidos.`
+    );
+  }
+
+  if (
+    data.unidadesAtendidas >
+    data.unidadesSolicitadas
+  ) {
+    errors.push(
+      `${title}: unidades atendidas não podem superar as unidades solicitadas.`
+    );
+  }
+
+  if (data.itensCorretos > data.itensConferidos) {
+    errors.push(
+      `${title}: itens corretos não podem superar os itens conferidos.`
+    );
+  }
+
+  if (
+    data.demandaDiariaMaxima <
+    data.demandaDiariaMedia
+  ) {
+    errors.push(
+      `${title}: a demanda diária máxima deve ser igual ou maior que a demanda média.`
+    );
+  }
+
+  if (data.leadTimeMaximo < data.leadTime) {
+    errors.push(
+      `${title}: o lead time máximo deve ser igual ou maior que o lead time médio.`
+    );
+  }
+
+  if (data.pedidosTotais <= 0) {
+    errors.push(
+      `${title}: o total de pedidos deve ser maior que zero.`
+    );
+  }
+
+  if (data.unidadesSolicitadas <= 0) {
+    errors.push(
+      `${title}: as unidades solicitadas devem ser maiores que zero.`
+    );
+  }
+
+  if (data.itensConferidos <= 0) {
+    errors.push(
+      `${title}: os itens conferidos devem ser maiores que zero.`
+    );
+  }
+
+  return errors;
 }
 
 function formatNumber(value: number, decimals = 1) {
@@ -485,6 +630,7 @@ export default function Home() {
   >([]);
 
   const [message, setMessage] = useState("");
+  const [observations, setObservations] = useState("");
 
   useEffect(() => {
     try {
@@ -509,6 +655,20 @@ export default function Home() {
     () => calculateKPIs(simulated),
     [simulated]
   );
+
+  const validationErrors = useMemo(() => {
+  return [
+    ...validateOperation(current, "Operação atual"),
+    ...validateOperation(
+      simulated,
+      "Cenário simulado"
+    ),
+  ];
+}, [current, simulated]);
+
+const hasValidationErrors =
+  validationErrors.length > 0;
+
 
   const chartData = [
     {
@@ -564,6 +724,12 @@ function updateSimulated(
   }
 
   function saveScenario() {
+    if (validationErrors.length > 0) {
+  setMessage(
+    "Corrija os erros de consistência antes de salvar o cenário."
+  );
+  return;
+}
     const name =
       scenarioName.trim() || `Cenário ${savedScenarios.length + 1}`;
 
@@ -617,12 +783,224 @@ function updateSimulated(
     }
   }
 
+  function exportJson() {
+  const backup: LogSimBackup = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    current,
+    simulated,
+    targets,
+    scenarioName,
+    observations,
+    savedScenarios,
+  };
+
+  const json = JSON.stringify(backup, null, 2);
+
+  const blob = new Blob([json], {
+    type: "application/json;charset=utf-8",
+  });
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  const date = new Date()
+    .toISOString()
+    .slice(0, 10);
+
+  link.href = url;
+  link.download = `logsim-pro-backup-${date}.json`;
+
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  URL.revokeObjectURL(url);
+
+  setMessage("Backup JSON exportado com sucesso.");
+}
+
+function isOperationData(
+  value: unknown
+): value is OperationData {
+  if (
+    typeof value !== "object" ||
+    value === null
+  ) {
+    return false;
+  }
+
+  const operation =
+    value as Record<string, unknown>;
+
+  const requiredFields: Array<
+    keyof OperationData
+  > = [
+    "demanda",
+    "estoqueMedio",
+    "pedidosTotais",
+    "pedidosNoPrazo",
+    "pedidosCompletosNoPrazo",
+    "unidadesSolicitadas",
+    "unidadesAtendidas",
+    "leadTime",
+    "itensConferidos",
+    "itensCorretos",
+    "custoLogistico",
+    "demandaDiariaMedia",
+    "demandaDiariaMaxima",
+    "leadTimeMaximo",
+    "estoqueDisponivel",
+  ];
+
+  return requiredFields.every(
+    (field) =>
+      typeof operation[field] === "number" &&
+      Number.isFinite(operation[field])
+  );
+}
+
+function isTargets(
+  value: unknown
+): value is Targets {
+  if (
+    typeof value !== "object" ||
+    value === null
+  ) {
+    return false;
+  }
+
+  const importedTargets =
+    value as Record<string, unknown>;
+
+  const requiredFields: Array<keyof Targets> = [
+    "otif",
+    "otd",
+    "fillRate",
+    "leadTime",
+    "acuracidade",
+    "ruptura",
+  ];
+
+  return requiredFields.every(
+    (field) =>
+      typeof importedTargets[field] === "number" &&
+      Number.isFinite(importedTargets[field])
+  );
+}
+
+function importJson(
+  event: React.ChangeEvent<HTMLInputElement>
+) {
+  const file = event.target.files?.[0];
+
+  if (!file) {
+    return;
+  }
+
+  if (
+    !file.name.toLowerCase().endsWith(".json")
+  ) {
+    setMessage(
+      "Selecione um arquivo com extensão .json."
+    );
+
+    event.target.value = "";
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = () => {
+    try {
+      if (typeof reader.result !== "string") {
+        throw new Error("Conteúdo inválido.");
+      }
+
+      const parsed = JSON.parse(
+        reader.result
+      ) as Partial<LogSimBackup>;
+
+      if (parsed.version !== 1) {
+        throw new Error(
+          "Versão de backup incompatível."
+        );
+      }
+
+      if (
+        !isOperationData(parsed.current) ||
+        !isOperationData(parsed.simulated) ||
+        !isTargets(parsed.targets)
+      ) {
+        throw new Error(
+          "O arquivo não possui dados válidos do LogSim Pro."
+        );
+      }
+
+      setCurrent(parsed.current);
+      setSimulated(parsed.simulated);
+      setTargets(parsed.targets);
+
+      setScenarioName(
+        typeof parsed.scenarioName === "string"
+          ? parsed.scenarioName
+          : "Cenário importado"
+      );
+
+      setObservations(
+        typeof parsed.observations === "string"
+          ? parsed.observations
+          : ""
+      );
+
+      const importedScenarios =
+        Array.isArray(parsed.savedScenarios)
+          ? parsed.savedScenarios
+          : [];
+
+      setSavedScenarios(importedScenarios);
+
+      localStorage.setItem(
+        "logsim-pro-scenarios",
+        JSON.stringify(importedScenarios)
+      );
+
+      setMessage(
+        `Backup "${file.name}" importado com sucesso.`
+      );
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Arquivo inválido.";
+
+      setMessage(
+        `Não foi possível importar: ${errorMessage}`
+      );
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  reader.onerror = () => {
+    setMessage(
+      "Não foi possível ler o arquivo selecionado."
+    );
+
+    event.target.value = "";
+  };
+
+  reader.readAsText(file);
+}
+
   function resetExample() {
     setCurrent(initialCurrent);
     setSimulated(initialSimulated);
     setTargets(initialTargets);
     setScenarioName("Cenário otimizado");
+    setObservations("");
     setMessage("Dados de exemplo restaurados.");
+    
   }
 
   const diagnostics = useMemo(() => {
@@ -801,6 +1179,38 @@ function updateSimulated(
                 suffix="dias"
                 onChange={updateCurrent}
               />
+              
+              <NumberInput
+  label="Demanda média diária"
+  name="demandaDiariaMedia"
+  value={current.demandaDiariaMedia}
+  suffix="un./dia"
+  onChange={updateCurrent}
+/>
+
+<NumberInput
+  label="Demanda máxima diária"
+  name="demandaDiariaMaxima"
+  value={current.demandaDiariaMaxima}
+  suffix="un./dia"
+  onChange={updateCurrent}
+/>
+
+<NumberInput
+  label="Lead time máximo"
+  name="leadTimeMaximo"
+  value={current.leadTimeMaximo}
+  suffix="dias"
+  onChange={updateCurrent}
+/>
+
+<NumberInput
+  label="Estoque disponível"
+  name="estoqueDisponivel"
+  value={current.estoqueDisponivel}
+  suffix="un."
+  onChange={updateCurrent}
+/>
 
               <NumberInput
                 label="Itens conferidos"
@@ -933,6 +1343,38 @@ function updateSimulated(
               />
 
               <NumberInput
+  label="Demanda média diária"
+  name="demandaDiariaMedia"
+  value={simulated.demandaDiariaMedia}
+  suffix="un./dia"
+  onChange={updateSimulated}
+/>
+
+<NumberInput
+  label="Demanda máxima diária"
+  name="demandaDiariaMaxima"
+  value={simulated.demandaDiariaMaxima}
+  suffix="un./dia"
+  onChange={updateSimulated}
+/>
+
+<NumberInput
+  label="Lead time máximo"
+  name="leadTimeMaximo"
+  value={simulated.leadTimeMaximo}
+  suffix="dias"
+  onChange={updateSimulated}
+/>
+
+<NumberInput
+  label="Estoque disponível"
+  name="estoqueDisponivel"
+  value={simulated.estoqueDisponivel}
+  suffix="un."
+  onChange={updateSimulated}
+/>
+
+              <NumberInput
                 label="Itens conferidos"
                 name="itensConferidos"
                 value={simulated.itensConferidos}
@@ -960,7 +1402,8 @@ function updateSimulated(
             <button
               type="button"
               onClick={saveScenario}
-              className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+              disabled={hasValidationErrors}
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               <Save size={17} />
               Salvar cenário no navegador
@@ -973,6 +1416,53 @@ function updateSimulated(
             <div className="rounded-xl bg-violet-100 p-2.5 text-violet-700">
               <Target size={22} />
             </div>
+
+<section className="mt-8">
+  {hasValidationErrors ? (
+    <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+      <div className="flex items-center gap-3">
+        <div className="rounded-xl bg-red-100 p-2.5 text-red-700">
+          <AlertCircle size={22} />
+        </div>
+
+        <div>
+          <h2 className="text-xl font-bold text-red-900">
+            Erros de consistência
+          </h2>
+
+          <p className="text-sm text-red-700">
+            Corrija os dados antes de salvar ou analisar o cenário.
+          </p>
+        </div>
+      </div>
+
+      <ul className="mt-5 space-y-2">
+        {validationErrors.map((error) => (
+          <li
+            key={error}
+            className="rounded-xl border border-red-200 bg-white px-4 py-3 text-sm text-red-800"
+          >
+            {error}
+          </li>
+        ))}
+      </ul>
+    </div>
+  ) : (
+    <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-800">
+      <CheckCircle2 size={22} />
+
+      <div>
+        <p className="font-bold">
+          Dados consistentes
+        </p>
+
+        <p className="text-sm">
+          Nenhuma inconsistência foi identificada.
+        </p>
+      </div>
+    </div>
+  )}
+</section>
 
             <div>
               <h2 className="text-xl font-bold">
@@ -1053,6 +1543,107 @@ function updateSimulated(
             />
           </div>
         </section>
+
+<section className="mt-8">
+  <div className="mb-5">
+    <h2 className="text-2xl font-bold">
+      Planejamento de reposição
+    </h2>
+
+    <p className="mt-1 text-sm text-slate-500">
+      Resultados calculados para o cenário simulado
+    </p>
+  </div>
+
+  <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+    <article className="rounded-2xl border border-blue-200 bg-blue-50 p-5 shadow-sm">
+      <p className="text-sm font-semibold text-slate-600">
+        Demanda durante o lead time
+      </p>
+
+      <p className="mt-2 text-3xl font-bold text-blue-700">
+        {formatNumber(
+          simulatedKPIs.demandaDuranteLeadTime,
+          0
+        )}{" "}
+        un.
+      </p>
+
+      <p className="mt-3 text-xs text-slate-500">
+        Demanda média diária × lead time médio
+      </p>
+    </article>
+
+    <article className="rounded-2xl border border-violet-200 bg-violet-50 p-5 shadow-sm">
+      <p className="text-sm font-semibold text-slate-600">
+        Estoque de segurança
+      </p>
+
+      <p className="mt-2 text-3xl font-bold text-violet-700">
+        {formatNumber(
+          simulatedKPIs.estoqueSeguranca,
+          0
+        )}{" "}
+        un.
+      </p>
+
+      <p className="mt-3 text-xs text-slate-500">
+        Proteção estimada contra variações de demanda e prazo
+      </p>
+    </article>
+
+    <article className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5 shadow-sm">
+      <p className="text-sm font-semibold text-slate-600">
+        Ponto de reposição
+      </p>
+
+      <p className="mt-2 text-3xl font-bold text-indigo-700">
+        {formatNumber(
+          simulatedKPIs.pontoReposicao,
+          0
+        )}{" "}
+        un.
+      </p>
+
+      <p className="mt-3 text-xs text-slate-500">
+        Nível estimado para disparar uma nova compra
+      </p>
+    </article>
+
+    <article
+      className={`rounded-2xl border p-5 shadow-sm ${
+        simulatedKPIs.precisaRepor
+          ? "border-red-200 bg-red-50"
+          : "border-emerald-200 bg-emerald-50"
+      }`}
+    >
+      <p className="text-sm font-semibold text-slate-600">
+        Situação da reposição
+      </p>
+
+      <p
+        className={`mt-2 text-2xl font-bold ${
+          simulatedKPIs.precisaRepor
+            ? "text-red-700"
+            : "text-emerald-700"
+        }`}
+      >
+        {simulatedKPIs.precisaRepor
+          ? "Repor estoque"
+          : "Estoque suficiente"}
+      </p>
+
+      <p className="mt-3 text-xs text-slate-500">
+        Disponível:{" "}
+        {formatNumber(
+          simulated.estoqueDisponivel,
+          0
+        )}{" "}
+        unidades
+      </p>
+    </article>
+  </div>
+</section>
 
         <section className="mt-8">
           <div className="mb-5 flex items-center gap-3">
@@ -1217,6 +1808,76 @@ function updateSimulated(
             </ul>
           </div>
         </section>
+
+        <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+  <h2 className="text-xl font-bold">
+    Observações da simulação
+  </h2>
+
+  <p className="mt-1 text-sm text-slate-500">
+    Registre decisões, premissas e conclusões do cenário.
+  </p>
+
+  <textarea
+    value={observations}
+    onChange={(event) =>
+      setObservations(event.target.value)
+    }
+    rows={6}
+    placeholder="Exemplo: aumentar o estoque de segurança, negociar redução do lead time e revisar o fornecedor..."
+    className="mt-5 w-full resize-y rounded-xl border border-slate-300 p-4 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+  />
+  
+  <p className="mt-2 text-right text-xs text-slate-400">
+    {observations.length} caracteres
+  </p>
+</section>
+
+<section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+  <div className="flex items-center gap-3">
+    <div className="rounded-xl bg-cyan-100 p-2.5 text-cyan-700">
+      <FileJson size={22} />
+    </div>
+
+    <div>
+      <h2 className="text-xl font-bold">
+        Backup do LogSim Pro
+      </h2>
+
+      <p className="text-sm text-slate-500">
+        Exporte ou importe os dados completos em JSON.
+      </p>
+    </div>
+  </div>
+
+  <div className="mt-6 grid gap-3 sm:grid-cols-2">
+    <button
+      type="button"
+      onClick={exportJson}
+      className="flex items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-3 font-semibold text-white transition hover:bg-cyan-700"
+    >
+      <Download size={18} />
+      Exportar backup JSON
+    </button>
+
+    <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-cyan-300 bg-cyan-50 px-4 py-3 font-semibold text-cyan-800 transition hover:bg-cyan-100">
+      <Upload size={18} />
+      Importar backup JSON
+
+      <input
+        type="file"
+        accept="application/json,.json"
+        onChange={importJson}
+        className="hidden"
+      />
+    </label>
+  </div>
+
+  <p className="mt-4 text-xs leading-relaxed text-slate-500">
+    O arquivo inclui operação atual, cenário simulado,
+    metas, observações e cenários salvos.
+  </p>
+</section>
 
         <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-xl font-bold">
