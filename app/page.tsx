@@ -537,25 +537,25 @@ export default function Home() {
     },
   ];
 
-  function updateCurrent(
-    name: keyof OperationData,
-    value: number
-  ) {
-    setCurrent((previous) => ({
-      ...previous,
-      value,
-    }));
-  }
+function updateCurrent(
+  name: keyof OperationData,
+  value: number
+) {
+  setCurrent((previous) => ({
+    ...previous,
+    [name]: value,
+  }));
+}
 
-  function updateSimulated(
-    name: keyof OperationData,
-    value: number
-  ) {
-    setSimulated((previous) => ({
-      ...previous,
-      value,
-    }));
-  }
+function updateSimulated(
+  name: keyof OperationData,
+  value: number
+) {
+  setSimulated((previous) => ({
+    ...previous,
+    [name]: value,
+  }));
+}
 
   function copyCurrentToSimulation() {
     setSimulated({ ...current });
