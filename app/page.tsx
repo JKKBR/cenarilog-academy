@@ -20,7 +20,7 @@ export default function Home() {
         </h1>
 
         <p className="text-gray-600 mt-2">
-          Simulador de Indicadores Logísticos
+          Simulador de Indicadores Logísticos LogSim-Pro
         </p>
 
         <div className="grid md:grid-cols-2 gap-6 mt-8">
