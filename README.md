@@ -18,7 +18,11 @@ A proposta de aprendizagem é baseada na pergunta:
 
 O simulador não substitui um ERP, WMS, TMS, inventário físico ou análise profissional. O objetivo é ajudar estudantes e usuários iniciantes a compreender relações entre dados, indicadores e decisões logísticas.
 
-Link do Simulador: [Acesse o CenariLog Academy](https://cenarilog-academy.vercel.app/)  
+🔗 [Acessar Plataforma](https://cenarilog-academy.vercel.app/)
+
+📚 Documentação:
+- 📘 [Manual Iniciante](https://github.com/JKKBR/JKKBR/blob/main/docs/Manual_Iniciante_CenariLog_Academy_v3.docx.docx)
+- 🔧 [Manual Técnico](https://github.com/JKKBR/JKKBR/blob/main/docs/Manual_Tecnico_Cenarilog_Academy_v3.docx.docx)
 --- 
 
 ## 2. Evolução das versões
