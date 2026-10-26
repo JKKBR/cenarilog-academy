@@ -118,6 +118,36 @@ O uso didático recomendado segue sete etapas:
 6. Registrar a conclusão da experiência.
 7. Salvar ou exportar o cenário.
 
+
+## Objetivo Versao 4.0
+
+Adicionar uma camada educacional ao CenariLog Academy sem alterar os cálculos existentes.
+
+## Recursos adicionados
+
+- Guia Interativo para iniciantes
+- Convite opcional na primeira visita
+- Destaque das principais áreas do simulador
+- Explicações de OTD, OTIF, Fill Rate e ruptura
+- Progresso das etapas
+- Opção de pular ou repetir
+- Relatório educacional ao concluir
+- Preferência salva no navegador
+- Funcionamento responsivo
+
+## Validações
+
+- npm run build concluído
+- TypeScript concluído
+- Teste visual em computador
+- Teste em tela pequena
+- Recursos anteriores preservados
+
+## Limitações
+
+- O relatório registra a conclusão do guia, não uma avaliação profissional
+- Os níveis intermediário e avançado serão adicionados em versões futuras
+- 
 ### Regra de ouro
 
 > Nas primeiras simulações, altere somente uma variável por vez.
