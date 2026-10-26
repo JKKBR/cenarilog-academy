@@ -67,7 +67,16 @@ function criarRelatorio(): Relatorio {
   };
 }
 
-export default function GuiaInterativo() {
+type GuiaInterativoProps = {
+  aoSelecionarAtividadeIntermediaria?: (
+    tutorial: TutorialIntermediario
+  ) => void;
+};
+
+export default function GuiaInterativo({
+  aoSelecionarAtividadeIntermediaria,
+}: GuiaInterativoProps) {
+
   const [guiaAtivo, setGuiaAtivo] =
     useState(false);
 
@@ -125,6 +134,8 @@ export default function GuiaInterativo() {
       "cenarilog-academy-v4-1-atividade-atual",
       tutorial.id
     );
+
+    aoSelecionarAtividadeIntermediaria?.(tutorial);
   }
 
   function iniciarGuia() {
