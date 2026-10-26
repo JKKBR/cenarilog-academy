@@ -34,6 +34,7 @@ import {
 import ProductsModule from "@/components/ProductsModule";
 import MonthlySimulation from "../components/MonthlySimulation";
 import ChallengeOptimizer from "../components/ChallengeOptimizer";
+import GuiaInterativo from "@/components/guia/GuiaInterativo";
 
 type OperationData = {
   demanda: number;
@@ -200,7 +201,7 @@ function calculateKPIs(data: OperationData): KPIResults {
   const estoqueSeguranca = Math.max(
     0,
     data.demandaDiariaMaxima * data.leadTimeMaximo -
-      data.demandaDiariaMedia * data.leadTime
+    data.demandaDiariaMedia * data.leadTime
   );
 
   const pontoReposicao =
@@ -367,13 +368,18 @@ function NumberInput({
   name,
   value,
   suffix,
+  tourId,
   onChange,
 }: {
   label: string;
   name: keyof OperationData;
   value: number;
   suffix?: string;
-  onChange: (name: keyof OperationData, value: number) => void;
+  tourId?: string;
+  onChange: (
+    name: keyof OperationData,
+    value: number
+  ) => void;
 }) {
   const [inputValue, setInputValue] = useState(String(value));
 
@@ -418,7 +424,10 @@ function NumberInput({
   }
 
   return (
-    <label className="block">
+    <label
+      data-tour={tourId}
+      className="block"
+    >
       <span className="mb-1.5 block text-sm font-medium text-slate-700">
         {label}
       </span>
@@ -532,6 +541,7 @@ function KPICard({
   simulated,
   target,
   format,
+  tourId,
   lowerIsBetter = false,
 }: {
   title: string;
@@ -539,6 +549,7 @@ function KPICard({
   simulated: number;
   target?: number;
   format: (value: number) => string;
+  tourId?: string;
   lowerIsBetter?: boolean;
 }) {
   const variation = simulated - current;
@@ -555,6 +566,7 @@ function KPICard({
 
   return (
     <article
+      data-tour={tourId}
       className={`rounded-2xl border p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${styles.card}`}
     >
       <div className="flex items-start justify-between gap-3">
@@ -585,13 +597,12 @@ function KPICard({
 
         <div className="text-right">
           <div
-            className={`flex items-center justify-end gap-1 text-sm font-semibold ${
-              unchanged
-                ? "text-slate-500"
-                : improved
-                  ? "text-emerald-700"
-                  : "text-red-700"
-            }`}
+            className={`flex items-center justify-end gap-1 text-sm font-semibold ${unchanged
+              ? "text-slate-500"
+              : improved
+                ? "text-emerald-700"
+                : "text-red-700"
+              }`}
           >
             {!unchanged &&
               (variation > 0 ? (
@@ -661,17 +672,17 @@ export default function Home() {
   );
 
   const validationErrors = useMemo(() => {
-  return [
-    ...validateOperation(current, "Operação atual"),
-    ...validateOperation(
-      simulated,
-      "Cenário simulado"
-    ),
-  ];
-}, [current, simulated]);
+    return [
+      ...validateOperation(current, "Operação atual"),
+      ...validateOperation(
+        simulated,
+        "Cenário simulado"
+      ),
+    ];
+  }, [current, simulated]);
 
-const hasValidationErrors =
-  validationErrors.length > 0;
+  const hasValidationErrors =
+    validationErrors.length > 0;
 
 
   const chartData = [
@@ -701,25 +712,25 @@ const hasValidationErrors =
     },
   ];
 
-function updateCurrent(
-  name: keyof OperationData,
-  value: number
-) {
-  setCurrent((previous) => ({
-    ...previous,
-    [name]: value,
-  }));
-}
+  function updateCurrent(
+    name: keyof OperationData,
+    value: number
+  ) {
+    setCurrent((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+  }
 
-function updateSimulated(
-  name: keyof OperationData,
-  value: number
-) {
-  setSimulated((previous) => ({
-    ...previous,
-    [name]: value,
-  }));
-}
+  function updateSimulated(
+    name: keyof OperationData,
+    value: number
+  ) {
+    setSimulated((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+  }
 
   function copyCurrentToSimulation() {
     setSimulated({ ...current });
@@ -729,11 +740,11 @@ function updateSimulated(
 
   function saveScenario() {
     if (validationErrors.length > 0) {
-  setMessage(
-    "Corrija os erros de consistência antes de salvar o cenário."
-  );
-  return;
-}
+      setMessage(
+        "Corrija os erros de consistência antes de salvar o cenário."
+      );
+      return;
+    }
     const name =
       scenarioName.trim() || `Cenário ${savedScenarios.length + 1}`;
 
@@ -788,214 +799,214 @@ function updateSimulated(
   }
 
   function exportJson() {
-  const backup: LogSimBackup = {
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    current,
-    simulated,
-    targets,
-    scenarioName,
-    observations,
-    savedScenarios,
-  };
+    const backup: LogSimBackup = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      current,
+      simulated,
+      targets,
+      scenarioName,
+      observations,
+      savedScenarios,
+    };
 
-  const json = JSON.stringify(backup, null, 2);
+    const json = JSON.stringify(backup, null, 2);
 
-  const blob = new Blob([json], {
-    type: "application/json;charset=utf-8",
-  });
+    const blob = new Blob([json], {
+      type: "application/json;charset=utf-8",
+    });
 
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
 
-  const date = new Date()
-    .toISOString()
-    .slice(0, 10);
+    const date = new Date()
+      .toISOString()
+      .slice(0, 10);
 
-  link.href = url;
-  link.download = `cenarilog-academy-backup-${date}.json`;
+    link.href = url;
+    link.download = `cenarilog-academy-backup-${date}.json`;
 
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
 
-  URL.revokeObjectURL(url);
+    URL.revokeObjectURL(url);
 
-  setMessage("Backup JSON exportado com sucesso.");
-}
-
-function isOperationData(
-  value: unknown
-): value is OperationData {
-  if (
-    typeof value !== "object" ||
-    value === null
-  ) {
-    return false;
+    setMessage("Backup JSON exportado com sucesso.");
   }
 
-  const operation =
-    value as Record<string, unknown>;
-
-  const requiredFields: Array<
-    keyof OperationData
-  > = [
-    "demanda",
-    "estoqueMedio",
-    "pedidosTotais",
-    "pedidosNoPrazo",
-    "pedidosCompletosNoPrazo",
-    "unidadesSolicitadas",
-    "unidadesAtendidas",
-    "leadTime",
-    "itensConferidos",
-    "itensCorretos",
-    "custoLogistico",
-    "demandaDiariaMedia",
-    "demandaDiariaMaxima",
-    "leadTimeMaximo",
-    "estoqueDisponivel",
-  ];
-
-  return requiredFields.every(
-    (field) =>
-      typeof operation[field] === "number" &&
-      Number.isFinite(operation[field])
-  );
-}
-
-function isTargets(
-  value: unknown
-): value is Targets {
-  if (
-    typeof value !== "object" ||
-    value === null
-  ) {
-    return false;
-  }
-
-  const importedTargets =
-    value as Record<string, unknown>;
-
-  const requiredFields: Array<keyof Targets> = [
-    "otif",
-    "otd",
-    "fillRate",
-    "leadTime",
-    "acuracidade",
-    "ruptura",
-  ];
-
-  return requiredFields.every(
-    (field) =>
-      typeof importedTargets[field] === "number" &&
-      Number.isFinite(importedTargets[field])
-  );
-}
-
-function importJson(
-  event: React.ChangeEvent<HTMLInputElement>
-) {
-  const file = event.target.files?.[0];
-
-  if (!file) {
-    return;
-  }
-
-  if (
-    !file.name.toLowerCase().endsWith(".json")
-  ) {
-    setMessage(
-      "Selecione um arquivo com extensão .json."
-    );
-
-    event.target.value = "";
-    return;
-  }
-
-  const reader = new FileReader();
-
-  reader.onload = () => {
-    try {
-      if (typeof reader.result !== "string") {
-        throw new Error("Conteúdo inválido.");
-      }
-
-      const parsed = JSON.parse(
-        reader.result
-      ) as Partial<LogSimBackup>;
-
-      if (parsed.version !== 1) {
-        throw new Error(
-          "Versão de backup incompatível."
-        );
-      }
-
-      if (
-        !isOperationData(parsed.current) ||
-        !isOperationData(parsed.simulated) ||
-        !isTargets(parsed.targets)
-      ) {
-        throw new Error(
-          "O arquivo não possui dados válidos do CenariLog Academy."
-        );
-      }
-
-      setCurrent(parsed.current);
-      setSimulated(parsed.simulated);
-      setTargets(parsed.targets);
-
-      setScenarioName(
-        typeof parsed.scenarioName === "string"
-          ? parsed.scenarioName
-          : "Cenário importado"
-      );
-
-      setObservations(
-        typeof parsed.observations === "string"
-          ? parsed.observations
-          : ""
-      );
-
-      const importedScenarios =
-        Array.isArray(parsed.savedScenarios)
-          ? parsed.savedScenarios
-          : [];
-
-      setSavedScenarios(importedScenarios);
-
-      localStorage.setItem(
-        "logsim-pro-scenarios",
-        JSON.stringify(importedScenarios)
-      );
-
-      setMessage(
-        `Backup "${file.name}" importado com sucesso.`
-      );
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Arquivo inválido.";
-
-      setMessage(
-        `Não foi possível importar: ${errorMessage}`
-      );
-    } finally {
-      event.target.value = "";
+  function isOperationData(
+    value: unknown
+  ): value is OperationData {
+    if (
+      typeof value !== "object" ||
+      value === null
+    ) {
+      return false;
     }
-  };
 
-  reader.onerror = () => {
-    setMessage(
-      "Não foi possível ler o arquivo selecionado."
+    const operation =
+      value as Record<string, unknown>;
+
+    const requiredFields: Array<
+      keyof OperationData
+    > = [
+        "demanda",
+        "estoqueMedio",
+        "pedidosTotais",
+        "pedidosNoPrazo",
+        "pedidosCompletosNoPrazo",
+        "unidadesSolicitadas",
+        "unidadesAtendidas",
+        "leadTime",
+        "itensConferidos",
+        "itensCorretos",
+        "custoLogistico",
+        "demandaDiariaMedia",
+        "demandaDiariaMaxima",
+        "leadTimeMaximo",
+        "estoqueDisponivel",
+      ];
+
+    return requiredFields.every(
+      (field) =>
+        typeof operation[field] === "number" &&
+        Number.isFinite(operation[field])
     );
+  }
 
-    event.target.value = "";
-  };
+  function isTargets(
+    value: unknown
+  ): value is Targets {
+    if (
+      typeof value !== "object" ||
+      value === null
+    ) {
+      return false;
+    }
 
-  reader.readAsText(file);
-}
+    const importedTargets =
+      value as Record<string, unknown>;
+
+    const requiredFields: Array<keyof Targets> = [
+      "otif",
+      "otd",
+      "fillRate",
+      "leadTime",
+      "acuracidade",
+      "ruptura",
+    ];
+
+    return requiredFields.every(
+      (field) =>
+        typeof importedTargets[field] === "number" &&
+        Number.isFinite(importedTargets[field])
+    );
+  }
+
+  function importJson(
+    event: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (
+      !file.name.toLowerCase().endsWith(".json")
+    ) {
+      setMessage(
+        "Selecione um arquivo com extensão .json."
+      );
+
+      event.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      try {
+        if (typeof reader.result !== "string") {
+          throw new Error("Conteúdo inválido.");
+        }
+
+        const parsed = JSON.parse(
+          reader.result
+        ) as Partial<LogSimBackup>;
+
+        if (parsed.version !== 1) {
+          throw new Error(
+            "Versão de backup incompatível."
+          );
+        }
+
+        if (
+          !isOperationData(parsed.current) ||
+          !isOperationData(parsed.simulated) ||
+          !isTargets(parsed.targets)
+        ) {
+          throw new Error(
+            "O arquivo não possui dados válidos do CenariLog Academy."
+          );
+        }
+
+        setCurrent(parsed.current);
+        setSimulated(parsed.simulated);
+        setTargets(parsed.targets);
+
+        setScenarioName(
+          typeof parsed.scenarioName === "string"
+            ? parsed.scenarioName
+            : "Cenário importado"
+        );
+
+        setObservations(
+          typeof parsed.observations === "string"
+            ? parsed.observations
+            : ""
+        );
+
+        const importedScenarios =
+          Array.isArray(parsed.savedScenarios)
+            ? parsed.savedScenarios
+            : [];
+
+        setSavedScenarios(importedScenarios);
+
+        localStorage.setItem(
+          "logsim-pro-scenarios",
+          JSON.stringify(importedScenarios)
+        );
+
+        setMessage(
+          `Backup "${file.name}" importado com sucesso.`
+        );
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Arquivo inválido.";
+
+        setMessage(
+          `Não foi possível importar: ${errorMessage}`
+        );
+      } finally {
+        event.target.value = "";
+      }
+    };
+
+    reader.onerror = () => {
+      setMessage(
+        "Não foi possível ler o arquivo selecionado."
+      );
+
+      event.target.value = "";
+    };
+
+    reader.readAsText(file);
+  }
 
   function resetExample() {
     setCurrent(initialCurrent);
@@ -1004,7 +1015,7 @@ function importJson(
     setScenarioName("Cenário otimizado");
     setObservations("");
     setMessage("Dados de exemplo restaurados.");
-    
+
   }
 
   const diagnostics = useMemo(() => {
@@ -1060,7 +1071,10 @@ function importJson(
 
   return (
     <main className="min-h-screen bg-slate-100 text-slate-900">
-      <header className="border-b border-slate-800 bg-slate-950 text-white">
+      <header
+        data-tour="cabecalho"
+        className="border-b border-slate-800 bg-slate-950 text-white"
+      >
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
             <div className="rounded-2xl bg-blue-600 p-3 shadow-lg shadow-blue-950/30">
@@ -1078,14 +1092,19 @@ function importJson(
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={resetExample}
-            className="flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm font-semibold transition hover:bg-slate-800"
-          >
-            <RotateCcw size={17} />
-            Restaurar exemplo
-          </button>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <GuiaInterativo />
+
+            <button
+              data-tour="restaurar-exemplo"
+              type="button"
+              onClick={resetExample}
+              className="flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm font-semibold transition hover:bg-slate-800"
+            >
+              <RotateCcw size={17} />
+              Restaurar exemplo
+            </button>
+          </div>
         </div>
       </header>
 
@@ -1106,7 +1125,10 @@ function importJson(
         )}
 
         <section className="grid gap-6 xl:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div
+            data-tour="operacao-atual"
+            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+          >
             <div className="mb-6 flex items-center gap-3">
               <div className="rounded-xl bg-slate-100 p-2.5 text-slate-700">
                 <Warehouse size={22} />
@@ -1183,38 +1205,38 @@ function importJson(
                 suffix="dias"
                 onChange={updateCurrent}
               />
-              
+
               <NumberInput
-  label="Demanda média diária"
-  name="demandaDiariaMedia"
-  value={current.demandaDiariaMedia}
-  suffix="un./dia"
-  onChange={updateCurrent}
-/>
+                label="Demanda média diária"
+                name="demandaDiariaMedia"
+                value={current.demandaDiariaMedia}
+                suffix="un./dia"
+                onChange={updateCurrent}
+              />
 
-<NumberInput
-  label="Demanda máxima diária"
-  name="demandaDiariaMaxima"
-  value={current.demandaDiariaMaxima}
-  suffix="un./dia"
-  onChange={updateCurrent}
-/>
+              <NumberInput
+                label="Demanda máxima diária"
+                name="demandaDiariaMaxima"
+                value={current.demandaDiariaMaxima}
+                suffix="un./dia"
+                onChange={updateCurrent}
+              />
 
-<NumberInput
-  label="Lead time máximo"
-  name="leadTimeMaximo"
-  value={current.leadTimeMaximo}
-  suffix="dias"
-  onChange={updateCurrent}
-/>
+              <NumberInput
+                label="Lead time máximo"
+                name="leadTimeMaximo"
+                value={current.leadTimeMaximo}
+                suffix="dias"
+                onChange={updateCurrent}
+              />
 
-<NumberInput
-  label="Estoque disponível"
-  name="estoqueDisponivel"
-  value={current.estoqueDisponivel}
-  suffix="un."
-  onChange={updateCurrent}
-/>
+              <NumberInput
+                label="Estoque disponível"
+                name="estoqueDisponivel"
+                value={current.estoqueDisponivel}
+                suffix="un."
+                onChange={updateCurrent}
+              />
 
               <NumberInput
                 label="Itens conferidos"
@@ -1242,6 +1264,7 @@ function importJson(
             </div>
 
             <button
+              data-tour="copiar-cenario"
               type="button"
               onClick={copyCurrentToSimulation}
               className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
@@ -1251,7 +1274,10 @@ function importJson(
             </button>
           </div>
 
-          <div className="rounded-2xl border border-blue-200 bg-white p-6 shadow-sm">
+          <div
+            data-tour="cenario-simulado"
+            className="rounded-2xl border border-blue-200 bg-white p-6 shadow-sm"
+          >
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
                 <div className="rounded-xl bg-blue-100 p-2.5 text-blue-700">
@@ -1309,6 +1335,7 @@ function importJson(
               />
 
               <NumberInput
+                tourId="pedidos-prazo-simulado"
                 label="Pedidos entregues no prazo"
                 name="pedidosNoPrazo"
                 value={simulated.pedidosNoPrazo}
@@ -1347,36 +1374,36 @@ function importJson(
               />
 
               <NumberInput
-  label="Demanda média diária"
-  name="demandaDiariaMedia"
-  value={simulated.demandaDiariaMedia}
-  suffix="un./dia"
-  onChange={updateSimulated}
-/>
+                label="Demanda média diária"
+                name="demandaDiariaMedia"
+                value={simulated.demandaDiariaMedia}
+                suffix="un./dia"
+                onChange={updateSimulated}
+              />
 
-<NumberInput
-  label="Demanda máxima diária"
-  name="demandaDiariaMaxima"
-  value={simulated.demandaDiariaMaxima}
-  suffix="un./dia"
-  onChange={updateSimulated}
-/>
+              <NumberInput
+                label="Demanda máxima diária"
+                name="demandaDiariaMaxima"
+                value={simulated.demandaDiariaMaxima}
+                suffix="un./dia"
+                onChange={updateSimulated}
+              />
 
-<NumberInput
-  label="Lead time máximo"
-  name="leadTimeMaximo"
-  value={simulated.leadTimeMaximo}
-  suffix="dias"
-  onChange={updateSimulated}
-/>
+              <NumberInput
+                label="Lead time máximo"
+                name="leadTimeMaximo"
+                value={simulated.leadTimeMaximo}
+                suffix="dias"
+                onChange={updateSimulated}
+              />
 
-<NumberInput
-  label="Estoque disponível"
-  name="estoqueDisponivel"
-  value={simulated.estoqueDisponivel}
-  suffix="un."
-  onChange={updateSimulated}
-/>
+              <NumberInput
+                label="Estoque disponível"
+                name="estoqueDisponivel"
+                value={simulated.estoqueDisponivel}
+                suffix="un."
+                onChange={updateSimulated}
+              />
 
               <NumberInput
                 label="Itens conferidos"
@@ -1415,63 +1442,73 @@ function importJson(
           </div>
         </section>
 
-        <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+
+
+        <section
+          data-tour="validacao"
+          className="mt-8"
+        >
+          {hasValidationErrors ? (
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-red-100 p-2.5 text-red-700">
+                  <AlertCircle size={22} />
+                </div>
+
+                <div>
+                  <h2 className="text-xl font-bold text-red-900">
+                    Erros de consistência
+                  </h2>
+
+                  <p className="text-sm text-red-700">
+                    Corrija os dados antes de salvar ou analisar o cenário.
+                  </p>
+                </div>
+              </div>
+
+              <ul className="mt-5 space-y-2">
+                {validationErrors.map((error) => (
+                  <li
+                    key={error}
+                    className="rounded-xl border border-red-200 bg-white px-4 py-3 text-sm text-red-800"
+                  >
+                    {error}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-800">
+              <CheckCircle2 size={22} />
+
+              <div>
+                <p className="font-bold">
+                  Dados consistentes
+                </p>
+
+                <p className="text-sm">
+                  Nenhuma inconsistência foi identificada.
+                </p>
+              </div>
+            </div>
+          )}
+        </section>
+
+
+        <section
+          data-tour="metas"
+          className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+        >
           <div className="mb-5 flex items-center gap-3">
             <div className="rounded-xl bg-violet-100 p-2.5 text-violet-700">
               <Target size={22} />
             </div>
 
-<section className="mt-8">
-  {hasValidationErrors ? (
-    <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
-      <div className="flex items-center gap-3">
-        <div className="rounded-xl bg-red-100 p-2.5 text-red-700">
-          <AlertCircle size={22} />
-        </div>
-
-        <div>
-          <h2 className="text-xl font-bold text-red-900">
-            Erros de consistência
-          </h2>
-
-          <p className="text-sm text-red-700">
-            Corrija os dados antes de salvar ou analisar o cenário.
-          </p>
-        </div>
-      </div>
-
-      <ul className="mt-5 space-y-2">
-        {validationErrors.map((error) => (
-          <li
-            key={error}
-            className="rounded-xl border border-red-200 bg-white px-4 py-3 text-sm text-red-800"
-          >
-            {error}
-          </li>
-        ))}
-      </ul>
-    </div>
-  ) : (
-    <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-800">
-      <CheckCircle2 size={22} />
-
-      <div>
-        <p className="font-bold">
-          Dados consistentes
-        </p>
-
-        <p className="text-sm">
-          Nenhuma inconsistência foi identificada.
-        </p>
-      </div>
-    </div>
-  )}
-</section>
-
             <div>
               <h2 className="text-xl font-bold">
                 Metas personalizadas
               </h2>
+
               <p className="text-sm text-slate-500">
                 Defina seus próprios limites de desempenho
               </p>
@@ -1548,108 +1585,112 @@ function importJson(
           </div>
         </section>
 
-<section className="mt-8">
-  <div className="mb-5">
-    <h2 className="text-2xl font-bold">
-      Planejamento de reposição
-    </h2>
+        <section
+          data-tour="reposicao"
+          className="mt-8"
+        >
+          <div className="mb-5">
+            <h2 className="text-2xl font-bold">
+              Planejamento de reposição
+            </h2>
 
-    <p className="mt-1 text-sm text-slate-500">
-      Resultados calculados para o cenário simulado
-    </p>
-  </div>
+            <p className="mt-1 text-sm text-slate-500">
+              Resultados calculados para o cenário simulado
+            </p>
+          </div>
 
-  <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-    <article className="rounded-2xl border border-blue-200 bg-blue-50 p-5 shadow-sm">
-      <p className="text-sm font-semibold text-slate-600">
-        Demanda durante o lead time
-      </p>
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+            <article className="rounded-2xl border border-blue-200 bg-blue-50 p-5 shadow-sm">
+              <p className="text-sm font-semibold text-slate-600">
+                Demanda durante o lead time
+              </p>
 
-      <p className="mt-2 text-3xl font-bold text-blue-700">
-        {formatNumber(
-          simulatedKPIs.demandaDuranteLeadTime,
-          0
-        )}{" "}
-        un.
-      </p>
+              <p className="mt-2 text-3xl font-bold text-blue-700">
+                {formatNumber(
+                  simulatedKPIs.demandaDuranteLeadTime,
+                  0
+                )}{" "}
+                un.
+              </p>
 
-      <p className="mt-3 text-xs text-slate-500">
-        Demanda média diária × lead time médio
-      </p>
-    </article>
+              <p className="mt-3 text-xs text-slate-500">
+                Demanda média diária × lead time médio
+              </p>
+            </article>
 
-    <article className="rounded-2xl border border-violet-200 bg-violet-50 p-5 shadow-sm">
-      <p className="text-sm font-semibold text-slate-600">
-        Estoque de segurança
-      </p>
+            <article className="rounded-2xl border border-violet-200 bg-violet-50 p-5 shadow-sm">
+              <p className="text-sm font-semibold text-slate-600">
+                Estoque de segurança
+              </p>
 
-      <p className="mt-2 text-3xl font-bold text-violet-700">
-        {formatNumber(
-          simulatedKPIs.estoqueSeguranca,
-          0
-        )}{" "}
-        un.
-      </p>
+              <p className="mt-2 text-3xl font-bold text-violet-700">
+                {formatNumber(
+                  simulatedKPIs.estoqueSeguranca,
+                  0
+                )}{" "}
+                un.
+              </p>
 
-      <p className="mt-3 text-xs text-slate-500">
-        Proteção estimada contra variações de demanda e prazo
-      </p>
-    </article>
+              <p className="mt-3 text-xs text-slate-500">
+                Proteção estimada contra variações de demanda e prazo
+              </p>
+            </article>
 
-    <article className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5 shadow-sm">
-      <p className="text-sm font-semibold text-slate-600">
-        Ponto de reposição
-      </p>
+            <article className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5 shadow-sm">
+              <p className="text-sm font-semibold text-slate-600">
+                Ponto de reposição
+              </p>
 
-      <p className="mt-2 text-3xl font-bold text-indigo-700">
-        {formatNumber(
-          simulatedKPIs.pontoReposicao,
-          0
-        )}{" "}
-        un.
-      </p>
+              <p className="mt-2 text-3xl font-bold text-indigo-700">
+                {formatNumber(
+                  simulatedKPIs.pontoReposicao,
+                  0
+                )}{" "}
+                un.
+              </p>
 
-      <p className="mt-3 text-xs text-slate-500">
-        Nível estimado para disparar uma nova compra
-      </p>
-    </article>
+              <p className="mt-3 text-xs text-slate-500">
+                Nível estimado para disparar uma nova compra
+              </p>
+            </article>
 
-    <article
-      className={`rounded-2xl border p-5 shadow-sm ${
-        simulatedKPIs.precisaRepor
-          ? "border-red-200 bg-red-50"
-          : "border-emerald-200 bg-emerald-50"
-      }`}
-    >
-      <p className="text-sm font-semibold text-slate-600">
-        Situação da reposição
-      </p>
+            <article
+              className={`rounded-2xl border p-5 shadow-sm ${simulatedKPIs.precisaRepor
+                ? "border-red-200 bg-red-50"
+                : "border-emerald-200 bg-emerald-50"
+                }`}
+            >
+              <p className="text-sm font-semibold text-slate-600">
+                Situação da reposição
+              </p>
 
-      <p
-        className={`mt-2 text-2xl font-bold ${
-          simulatedKPIs.precisaRepor
-            ? "text-red-700"
-            : "text-emerald-700"
-        }`}
-      >
-        {simulatedKPIs.precisaRepor
-          ? "Repor estoque"
-          : "Estoque suficiente"}
-      </p>
+              <p
+                className={`mt-2 text-2xl font-bold ${simulatedKPIs.precisaRepor
+                  ? "text-red-700"
+                  : "text-emerald-700"
+                  }`}
+              >
+                {simulatedKPIs.precisaRepor
+                  ? "Repor estoque"
+                  : "Estoque suficiente"}
+              </p>
 
-      <p className="mt-3 text-xs text-slate-500">
-        Disponível:{" "}
-        {formatNumber(
-          simulated.estoqueDisponivel,
-          0
-        )}{" "}
-        unidades
-      </p>
-    </article>
-  </div>
-</section>
+              <p className="mt-3 text-xs text-slate-500">
+                Disponível:{" "}
+                {formatNumber(
+                  simulated.estoqueDisponivel,
+                  0
+                )}{" "}
+                unidades
+              </p>
+            </article>
+          </div>
+        </section>
 
-        <section className="mt-8">
+        <section
+          data-tour="painel-indicadores"
+          className="mt-8"
+        >
           <div className="mb-5 flex items-center gap-3">
             <BarChart3 className="text-blue-600" />
             <div>
@@ -1664,6 +1705,7 @@ function importJson(
 
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
             <KPICard
+              tourId="indicador-otif"
               title="OTIF"
               current={currentKPIs.otif}
               simulated={simulatedKPIs.otif}
@@ -1672,6 +1714,7 @@ function importJson(
             />
 
             <KPICard
+              tourId="indicador-otd"
               title="OTD"
               current={currentKPIs.otd}
               simulated={simulatedKPIs.otd}
@@ -1680,6 +1723,7 @@ function importJson(
             />
 
             <KPICard
+              tourId="indicador-fill-rate"
               title="Fill Rate"
               current={currentKPIs.fillRate}
               simulated={simulatedKPIs.fillRate}
@@ -1688,6 +1732,7 @@ function importJson(
             />
 
             <KPICard
+              tourId="indicador-ruptura"
               title="Ruptura"
               current={currentKPIs.ruptura}
               simulated={simulatedKPIs.ruptura}
@@ -1731,7 +1776,10 @@ function importJson(
         </section>
 
         <section className="mt-8 grid gap-6 xl:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2">
+          <div
+            data-tour="grafico-comparacao"
+            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2"
+          >
             <h2 className="text-xl font-bold">
               Atual × Simulado × Meta
             </h2>
@@ -1814,80 +1862,82 @@ function importJson(
         </section>
 
         <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-  <h2 className="text-xl font-bold">
-    Observações da simulação
-  </h2>
+          <h2 className="text-xl font-bold">
+            Observações da simulação
+          </h2>
 
-  <p className="mt-1 text-sm text-slate-500">
-    Registre decisões, premissas e conclusões do cenário.
-  </p>
+          <p className="mt-1 text-sm text-slate-500">
+            Registre decisões, premissas e conclusões do cenário.
+          </p>
 
-  <textarea
-    value={observations}
-    onChange={(event) =>
-      setObservations(event.target.value)
-    }
-    rows={6}
-    placeholder="Exemplo: aumentar o estoque de segurança, negociar redução do lead time e revisar o fornecedor..."
-    className="mt-5 w-full resize-y rounded-xl border border-slate-300 p-4 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-  />
-  
-  <p className="mt-2 text-right text-xs text-slate-400">
-    {observations.length} caracteres
-  </p>
-</section>
+          <textarea
+            value={observations}
+            onChange={(event) =>
+              setObservations(event.target.value)
+            }
+            rows={6}
+            placeholder="Exemplo: aumentar o estoque de segurança, negociar redução do lead time e revisar o fornecedor..."
+            className="mt-5 w-full resize-y rounded-xl border border-slate-300 p-4 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+          />
 
-<section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-  <div className="flex items-center gap-3">
-    <div className="rounded-xl bg-cyan-100 p-2.5 text-cyan-700">
-      <FileJson size={22} />
-    </div>
+          <p className="mt-2 text-right text-xs text-slate-400">
+            {observations.length} caracteres
+          </p>
+        </section>
 
-    <div>
-      <h2 className="text-xl font-bold">
-        Backup do CenariLog Academy
-      </h2>
+        <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-cyan-100 p-2.5 text-cyan-700">
+              <FileJson size={22} />
+            </div>
 
-      <p className="text-sm text-slate-500">
-        Exporte ou importe os dados completos em JSON.
-      </p>
-    </div>
-  </div>
+            <div>
+              <h2 className="text-xl font-bold">
+                Backup do CenariLog Academy
+              </h2>
 
-  <div className="mt-6 grid gap-3 sm:grid-cols-2">
-    <button
-      type="button"
-      onClick={exportJson}
-      className="flex items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-3 font-semibold text-white transition hover:bg-cyan-700"
-    >
-      <Download size={18} />
-      Exportar backup JSON
-    </button>
+              <p className="text-sm text-slate-500">
+                Exporte ou importe os dados completos em JSON.
+              </p>
+            </div>
+          </div>
 
-    <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-cyan-300 bg-cyan-50 px-4 py-3 font-semibold text-cyan-800 transition hover:bg-cyan-100">
-      <Upload size={18} />
-      Importar backup JSON
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={exportJson}
+              className="flex items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-3 font-semibold text-white transition hover:bg-cyan-700"
+            >
+              <Download size={18} />
+              Exportar backup JSON
+            </button>
 
-      <input
-        type="file"
-        accept="application/json,.json"
-        onChange={importJson}
-        className="hidden"
-      />
-    </label>
-  </div>
+            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-cyan-300 bg-cyan-50 px-4 py-3 font-semibold text-cyan-800 transition hover:bg-cyan-100">
+              <Upload size={18} />
+              Importar backup JSON
 
-  <p className="mt-4 text-xs leading-relaxed text-slate-500">
-    O arquivo inclui operação atual, cenário simulado,
-    metas, observações e cenários salvos.
-  </p>
-  </section>
-  
-  <ProductsModule />
-  
-  <MonthlySimulation />
+              <input
+                type="file"
+                accept="application/json,.json"
+                onChange={importJson}
+                className="hidden"
+              />
+            </label>
+          </div>
 
-  <ChallengeOptimizer />
+          <p className="mt-4 text-xs leading-relaxed text-slate-500">
+            O arquivo inclui operação atual, cenário simulado,
+            metas, observações e cenários salvos.
+          </p>
+        </section>
+
+        <div data-tour="modulos-avancados">
+          <ProductsModule />
+
+          <MonthlySimulation />
+
+          <ChallengeOptimizer />
+        </div>
 
         <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-xl font-bold">
