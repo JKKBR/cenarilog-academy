@@ -24,3 +24,73 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  html,
+  body {
+    width: 100%;
+    height: auto;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    background: white;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .relatorio-print-overlay,
+  .relatorio-print-overlay * {
+    visibility: visible;
+  }
+
+  .relatorio-print-overlay {
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: auto !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  .relatorio-print-overlay>div {
+    display: block !important;
+    min-height: 0 !important;
+    max-width: none !important;
+  }
+
+  .relatorio-print-content {
+    position: static !important;
+    width: 100% !important;
+    overflow: visible !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: white !important;
+  }
+
+  .relatorio-print-content header {
+    background: #0f172a !important;
+    color: white !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .relatorio-print-content section,
+  .relatorio-print-content article,
+  .relatorio-print-content li {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
