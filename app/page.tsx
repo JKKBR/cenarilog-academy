@@ -36,6 +36,11 @@ import MonthlySimulation from "../components/MonthlySimulation";
 import ChallengeOptimizer from "../components/ChallengeOptimizer";
 import GuiaInterativo from "@/components/guia/GuiaInterativo";
 
+import type {
+  IdTutorialIntermediario,
+  TutorialIntermediario,
+} from "@/data/tutoriais/intermediario";
+
 type OperationData = {
   demanda: number;
   estoqueMedio: number;
@@ -138,6 +143,133 @@ const initialTargets: Targets = {
   leadTime: 6,
   acuracidade: 98,
   ruptura: 3,
+};
+type CenarioIntermediario = {
+  atual: OperationData;
+  simulado: OperationData;
+  metas: Targets;
+  mensagemInicial: string;
+  alvoVisual: string;
+};
+
+const cenariosIntermediarios: Partial<
+  Record<IdTutorialIntermediario, CenarioIntermediario>
+> = {
+  "pedidos-incompletos": {
+    atual: {
+      ...initialCurrent,
+      demanda: 4200,
+      estoqueMedio: 1300,
+      pedidosTotais: 1000,
+      pedidosNoPrazo: 960,
+      pedidosCompletosNoPrazo: 880,
+      unidadesSolicitadas: 4200,
+      unidadesAtendidas: 4050,
+      leadTime: 6,
+      itensConferidos: 800,
+      itensCorretos: 776,
+      custoLogistico: 22000,
+    },
+    simulado: {
+      ...initialCurrent,
+      demanda: 4200,
+      estoqueMedio: 1300,
+      pedidosTotais: 1000,
+      pedidosNoPrazo: 960,
+      pedidosCompletosNoPrazo: 880,
+      unidadesSolicitadas: 4200,
+      unidadesAtendidas: 4050,
+      leadTime: 6,
+      itensConferidos: 800,
+      itensCorretos: 776,
+      custoLogistico: 22000,
+    },
+    metas: {
+      otif: 95,
+      otd: 95,
+      fillRate: 96,
+      leadTime: 6,
+      acuracidade: 97,
+      ruptura: 4,
+    },
+    mensagemInicial:
+      "Compare OTD e OTIF. Depois, melhore os pedidos entregues no prazo e completos.",
+    alvoVisual:
+      '[data-tour="pedidos-completos-simulado"]',
+  },
+
+  "falta-produtos": {
+    atual: {
+      ...initialCurrent,
+      demanda: 5000,
+      estoqueMedio: 1200,
+      pedidosTotais: 900,
+      pedidosNoPrazo: 850,
+      pedidosCompletosNoPrazo: 810,
+      unidadesSolicitadas: 5000,
+      unidadesAtendidas: 4500,
+      leadTime: 7,
+      itensConferidos: 750,
+      itensCorretos: 720,
+      custoLogistico: 23000,
+    },
+    simulado: {
+      ...initialCurrent,
+      demanda: 5000,
+      estoqueMedio: 1200,
+      pedidosTotais: 900,
+      pedidosNoPrazo: 850,
+      pedidosCompletosNoPrazo: 810,
+      unidadesSolicitadas: 5000,
+      unidadesAtendidas: 4500,
+      leadTime: 7,
+      itensConferidos: 750,
+      itensCorretos: 720,
+      custoLogistico: 23000,
+    },
+    metas: {
+      otif: 94,
+      otd: 94,
+      fillRate: 97,
+      leadTime: 6,
+      acuracidade: 97,
+      ruptura: 3,
+    },
+    mensagemInicial:
+      "Compare unidades solicitadas e unidades atendidas. Tente alcançar Fill Rate de 97% e ruptura máxima de 3%.",
+    alvoVisual:
+      '[data-tour="unidades-atendidas-simulado"]',
+  },
+
+  "hora-repor": {
+    atual: {
+      ...initialCurrent,
+      demanda: 4800,
+      estoqueMedio: 1250,
+      demandaDiariaMedia: 180,
+      demandaDiariaMaxima: 240,
+      leadTime: 7,
+      leadTimeMaximo: 10,
+      estoqueDisponivel: 1450,
+    },
+    simulado: {
+      ...initialCurrent,
+      demanda: 4800,
+      estoqueMedio: 1250,
+      demandaDiariaMedia: 180,
+      demandaDiariaMaxima: 240,
+      leadTime: 7,
+      leadTimeMaximo: 10,
+      estoqueDisponivel: 1450,
+    },
+    metas: {
+      ...initialTargets,
+      leadTime: 6,
+    },
+    mensagemInicial:
+      "Observe o estoque disponível e compare com o ponto de reposição.",
+    alvoVisual: '[data-tour="reposicao"]',
+  },
 };
 
 function safeDivide(numerator: number, denominator: number) {
@@ -647,6 +779,18 @@ export default function Home() {
   const [message, setMessage] = useState("");
   const [observations, setObservations] = useState("");
 
+
+
+  const [
+    atividadeIntermediaria,
+    setAtividadeIntermediaria,
+  ] = useState<TutorialIntermediario | null>(null);
+
+  const [
+    atividadeIntermediariaConcluida,
+    setAtividadeIntermediariaConcluida,
+  ] = useState(false);
+
   useEffect(() => {
     try {
       const stored = localStorage.getItem(
@@ -670,6 +814,39 @@ export default function Home() {
     () => calculateKPIs(simulated),
     [simulated]
   );
+  const objetivoIntermediarioAtingido =
+    useMemo(() => {
+      if (!atividadeIntermediaria) {
+        return false;
+      }
+
+      switch (atividadeIntermediaria.id) {
+        case "pedidos-incompletos":
+          return (
+            simulatedKPIs.otif >= targets.otif &&
+            simulatedKPIs.otd >= targets.otd
+          );
+
+        case "falta-produtos":
+          return (
+            simulatedKPIs.fillRate >=
+            targets.fillRate &&
+            simulatedKPIs.ruptura <=
+            targets.ruptura
+          );
+
+        case "hora-repor":
+          return !simulatedKPIs.precisaRepor;
+
+        default:
+          return false;
+      }
+    }, [
+      atividadeIntermediaria,
+      simulatedKPIs,
+      targets,
+    ]);
+
 
   const validationErrors = useMemo(() => {
     return [
@@ -730,6 +907,130 @@ export default function Home() {
       ...previous,
       [name]: value,
     }));
+  }
+
+  function iniciarProblemaIntermediario(
+    tutorial: TutorialIntermediario
+  ) {
+    setAtividadeIntermediaria(tutorial);
+    setAtividadeIntermediariaConcluida(false);
+
+    const cenario =
+      cenariosIntermediarios[tutorial.id];
+
+    if (!cenario) {
+      setMessage(
+        "Este problema será conectado ao módulo correspondente em uma próxima etapa."
+      );
+
+      window.setTimeout(() => {
+        document
+          .querySelector('[data-tour="modulos-avancados"]')
+          ?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+      }, 150);
+
+      return;
+    }
+
+    setCurrent({ ...cenario.atual });
+    setSimulated({ ...cenario.simulado });
+    setTargets({ ...cenario.metas });
+
+    setScenarioName(
+      `Artesanatos Lucia’s - ${tutorial.titulo}`
+    );
+
+    setObservations(
+      `Atividade intermediária: ${tutorial.titulo}\n\nObjetivo: ${tutorial.objetivo}`
+    );
+
+    setMessage(cenario.mensagemInicial);
+
+    localStorage.setItem(
+      "cenarilog-academy-v4-1-atividade-atual",
+      tutorial.id
+    );
+
+    window.setTimeout(() => {
+      document
+        .querySelector(cenario.alvoVisual)
+        ?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+    }, 150);
+  }
+
+  function concluirProblemaIntermediario() {
+    if (
+      !atividadeIntermediaria ||
+      !objetivoIntermediarioAtingido
+    ) {
+      return;
+    }
+
+    setAtividadeIntermediariaConcluida(true);
+
+    const chaveProgresso =
+      "cenarilog-academy-v4-1-progresso-intermediario";
+
+    try {
+      const progressoSalvo =
+        localStorage.getItem(chaveProgresso);
+
+      const progressoAtual = progressoSalvo
+        ? JSON.parse(progressoSalvo)
+        : [];
+
+      const lista = Array.isArray(progressoAtual)
+        ? progressoAtual
+        : [];
+
+      const atualizado = [
+        ...lista.filter(
+          (item) =>
+            item.tutorialId !==
+            atividadeIntermediaria.id
+        ),
+        {
+          tutorialId:
+            atividadeIntermediaria.id,
+          iniciadoEm:
+            lista.find(
+              (item) =>
+                item.tutorialId ===
+                atividadeIntermediaria.id
+            )?.iniciadoEm ??
+            new Date().toISOString(),
+          pistasVisualizadas:
+            lista.find(
+              (item) =>
+                item.tutorialId ===
+                atividadeIntermediaria.id
+            )?.pistasVisualizadas ?? 0,
+          concluido: true,
+          concluidoEm: new Date().toISOString(),
+        },
+      ];
+
+      localStorage.setItem(
+        chaveProgresso,
+        JSON.stringify(atualizado)
+      );
+    } catch {
+      setMessage(
+        "A atividade foi concluída, mas o progresso não pôde ser salvo."
+      );
+
+      return;
+    }
+
+    setMessage(
+      `Problema concluído: ${atividadeIntermediaria.titulo}.`
+    );
   }
 
   function copyCurrentToSimulation() {
@@ -1093,7 +1394,11 @@ export default function Home() {
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row">
-            <GuiaInterativo />
+            <GuiaInterativo
+              aoSelecionarAtividadeIntermediaria={
+                iniciarProblemaIntermediario
+              }
+            />
 
             <button
               data-tour="restaurar-exemplo"
@@ -1112,6 +1417,69 @@ export default function Home() {
         {message && (
           <div className="mb-6 flex items-center justify-between gap-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
             <span>{message}</span>
+
+            {atividadeIntermediaria && (
+              <section className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 p-5 shadow-sm">
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-amber-700">
+                      Artesanatos Lucia’s · Nível intermediário
+                    </p>
+
+                    <h2 className="mt-1 text-xl font-bold text-slate-900">
+                      {atividadeIntermediaria.titulo}
+                    </h2>
+
+                    <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-700">
+                      {atividadeIntermediaria.objetivo}
+                    </p>
+
+                    <p
+                      className={`mt-3 text-sm font-bold ${objetivoIntermediarioAtingido
+                          ? "text-emerald-700"
+                          : "text-amber-800"
+                        }`}
+                    >
+                      {objetivoIntermediarioAtingido
+                        ? "Objetivo atingido. Você pode concluir a atividade."
+                        : "Objetivo ainda não atingido. Analise os indicadores e teste uma mudança."}
+                    </p>
+                  </div>
+
+                  <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAtividadeIntermediaria(null);
+                        setAtividadeIntermediariaConcluida(false);
+
+                        localStorage.removeItem(
+                          "cenarilog-academy-v4-1-atividade-atual"
+                        );
+                      }}
+                      className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      Encerrar
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={concluirProblemaIntermediario}
+                      disabled={
+                        !objetivoIntermediarioAtingido ||
+                        atividadeIntermediariaConcluida
+                      }
+                      className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                    >
+                      {atividadeIntermediariaConcluida
+                        ? "Atividade concluída"
+                        : "Concluir atividade"}
+                    </button>
+                  </div>
+                </div>
+              </section>
+            )}
+
 
             <button
               type="button"
@@ -1343,11 +1711,13 @@ export default function Home() {
               />
 
               <NumberInput
+                tourId="pedidos-completos-simulado"
                 label="Pedidos no prazo e completos"
                 name="pedidosCompletosNoPrazo"
                 value={simulated.pedidosCompletosNoPrazo}
                 onChange={updateSimulated}
               />
+
 
               <NumberInput
                 label="Unidades solicitadas"
@@ -1358,6 +1728,7 @@ export default function Home() {
               />
 
               <NumberInput
+                tourId="unidades-atendidas-simulado"
                 label="Unidades atendidas"
                 name="unidadesAtendidas"
                 value={simulated.unidadesAtendidas}
