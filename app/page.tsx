@@ -36,9 +36,10 @@ import MonthlySimulation from "../components/MonthlySimulation";
 import ChallengeOptimizer from "../components/ChallengeOptimizer";
 import GuiaInterativo from "@/components/guia/GuiaInterativo";
 
-import type {
-  IdTutorialIntermediario,
-  TutorialIntermediario,
+import {
+  tutoriaisIntermediarios,
+  type IdTutorialIntermediario,
+  type TutorialIntermediario,
 } from "@/data/tutoriais/intermediario";
 
 import RelatorioIntermediario, {
@@ -1272,6 +1273,40 @@ export default function Home() {
 
     iniciarProblemaIntermediario(
       atividadeIntermediaria
+    );
+  }
+
+  function abrirProximoProblemaIntermediario(
+    tutorialId: IdTutorialIntermediario
+  ) {
+    const proximoTutorial =
+      tutoriaisIntermediarios.find(
+        (tutorial) =>
+          tutorial.id === tutorialId
+      );
+
+    if (!proximoTutorial) {
+      setMessage(
+        "O próximo problema não foi encontrado."
+      );
+
+      return;
+    }
+
+    setMostrarRelatorioIntermediario(
+      false
+    );
+
+    setRelatorioIntermediario(
+      null
+    );
+
+    setAtividadeIntermediariaConcluida(
+      false
+    );
+
+    iniciarProblemaIntermediario(
+      proximoTutorial
     );
   }
 
@@ -2612,12 +2647,23 @@ export default function Home() {
 
 
         <RelatorioIntermediario
-          aberto={mostrarRelatorioIntermediario}
-          dados={relatorioIntermediario}
-          aoFechar={() =>
-            setMostrarRelatorioIntermediario(false)
+          aberto={
+            mostrarRelatorioIntermediario
           }
-          aoRepetir={repetirAtividadeIntermediaria}
+          dados={
+            relatorioIntermediario
+          }
+          aoFechar={() => {
+            setMostrarRelatorioIntermediario(
+              false
+            );
+          }}
+          aoRepetir={
+            repetirAtividadeIntermediaria
+          }
+          aoAbrirProximo={
+            abrirProximoProblemaIntermediario
+          }
         />
 
       </div>
