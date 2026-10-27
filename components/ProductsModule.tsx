@@ -15,12 +15,16 @@ import {
   X,
 } from "lucide-react";
 import {
-  ChangeEvent,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
+
+import type {
+  ChangeEvent,
+} from "react";
+
 import {
   Bar,
   BarChart,
@@ -34,6 +38,15 @@ import {
 } from "recharts";
 
 type ABCClass = "A" | "B" | "C";
+
+export type ResumoCurvaABC = {
+  totalProdutos: number;
+  quantidadeClasseA: number;
+  quantidadeClasseB: number;
+  quantidadeClasseC: number;
+  valorAnualTotal: number;
+  possuiClassificacaoCompleta: boolean;
+};
 
 type Product = {
   id: string;
@@ -59,6 +72,13 @@ type ProductAnalysis = Product & {
 };
 
 type ProductForm = Omit<Product, "id">;
+
+type ProductsModuleProps = {
+  atividadeIntermediariaAtiva?: boolean;
+  aoAtualizarCurvaABC?: (
+    resumo: ResumoCurvaABC
+  ) => void;
+};
 
 const emptyForm: ProductForm = {
   codigo: "",
@@ -169,7 +189,10 @@ function parseNumber(value: string) {
     return 0;
   }
 
-  let normalized = cleanValue.replace(/\s/g, "");
+  let normalized = cleanValue.replace(
+    /\s/g,
+    ""
+  );
 
   if (
     normalized.includes(",") &&
@@ -179,7 +202,10 @@ function parseNumber(value: string) {
       .replace(/\./g, "")
       .replace(",", ".");
   } else if (normalized.includes(",")) {
-    normalized = normalized.replace(",", ".");
+    normalized = normalized.replace(
+      ",",
+      "."
+    );
   }
 
   normalized = normalized.replace(
@@ -362,9 +388,12 @@ function ProductNumberInput({
   );
 }
 
-export default function ProductsModule() {
+export default function ProductsModule({
+  atividadeIntermediariaAtiva = false,
+  aoAtualizarCurvaABC,
+}: ProductsModuleProps) {
   const [products, setProducts] =
-    useState<Product[]>([]);
+    useState<Product[]>(exampleProducts);
 
   const [form, setForm] =
     useState<ProductForm>(emptyForm);
@@ -372,11 +401,17 @@ export default function ProductsModule() {
   const [editingId, setEditingId] =
     useState<string | null>(null);
 
-  const [search, setSearch] = useState("");
-  const [message, setMessage] = useState("");
+  const [search, setSearch] =
+    useState("");
 
-  const [limitA, setLimitA] = useState(80);
-  const [limitB, setLimitB] = useState(95);
+  const [message, setMessage] =
+    useState("");
+
+  const [limitA, setLimitA] =
+    useState(80);
+
+  const [limitB, setLimitB] =
+    useState(95);
 
   const fileInputRef =
     useRef<HTMLInputElement>(null);
@@ -426,7 +461,7 @@ export default function ProductsModule() {
           product.custoUnitario,
         pontoReposicao:
           product.demandaDiariaMedia *
-            product.leadTime +
+          product.leadTime +
           product.estoqueSeguranca,
       }))
       .sort(
@@ -448,8 +483,8 @@ export default function ProductsModule() {
       const percentage =
         totalAnnualValue > 0
           ? (product.valorConsumoAnual /
-              totalAnnualValue) *
-            100
+            totalAnnualValue) *
+          100
           : 0;
 
       accumulated += percentage;
@@ -528,6 +563,47 @@ export default function ProductsModule() {
     );
   }, [analysis]);
 
+  const resumoCurvaABC =
+    useMemo<ResumoCurvaABC>(() => {
+      const quantidadeClasseA =
+        totals.classes.A;
+
+      const quantidadeClasseB =
+        totals.classes.B;
+
+      const quantidadeClasseC =
+        totals.classes.C;
+
+      return {
+        totalProdutos: products.length,
+        quantidadeClasseA,
+        quantidadeClasseB,
+        quantidadeClasseC,
+        valorAnualTotal:
+          totals.valorConsumoAnual,
+        possuiClassificacaoCompleta:
+          products.length >= 3 &&
+          quantidadeClasseA >= 1 &&
+          quantidadeClasseB >= 1 &&
+          quantidadeClasseC >= 1,
+      };
+    }, [
+      products.length,
+      totals.classes.A,
+      totals.classes.B,
+      totals.classes.C,
+      totals.valorConsumoAnual,
+    ]);
+
+  useEffect(() => {
+    aoAtualizarCurvaABC?.(
+      resumoCurvaABC
+    );
+  }, [
+    aoAtualizarCurvaABC,
+    resumoCurvaABC,
+  ]);
+
   const abcChartData = useMemo(() => {
     return (["A", "B", "C"] as ABCClass[]).map(
       (abcClass) => ({
@@ -586,7 +662,7 @@ export default function ProductsModule() {
     const duplicatedCode = products.some(
       (product) =>
         product.codigo.trim().toLowerCase() ===
-          form.codigo.trim().toLowerCase() &&
+        form.codigo.trim().toLowerCase() &&
         product.id !== editingId
     );
 
@@ -883,7 +959,7 @@ export default function ProductsModule() {
 
         const delimiter =
           lines[0].split(";").length >=
-          lines[0].split(",").length
+            lines[0].split(",").length
             ? ";"
             : ",";
 
@@ -960,32 +1036,32 @@ export default function ProductsModule() {
               ]?.trim() || "Sem categoria",
             demandaAnual: parseNumber(
               columns[
-                columnIndex.demandaanual
+              columnIndex.demandaanual
               ] ?? "0"
             ),
             estoqueAtual: parseNumber(
               columns[
-                columnIndex.estoqueatual
+              columnIndex.estoqueatual
               ] ?? "0"
             ),
             custoUnitario: parseNumber(
               columns[
-                columnIndex.custounitario
+              columnIndex.custounitario
               ] ?? "0"
             ),
             demandaDiariaMedia: parseNumber(
               columns[
-                columnIndex.demandadiariamedia
+              columnIndex.demandadiariamedia
               ] ?? "0"
             ),
             leadTime: parseNumber(
               columns[
-                columnIndex.leadtime
+              columnIndex.leadtime
               ] ?? "0"
             ),
             estoqueSeguranca: parseNumber(
               columns[
-                columnIndex.estoqueseguranca
+              columnIndex.estoqueseguranca
               ] ?? "0"
             ),
           });
@@ -1034,9 +1110,9 @@ export default function ProductsModule() {
 
         setMessage(
           `${uniqueImported.length} produto(s) importado(s).` +
-            (ignored > 0
-              ? ` ${ignored} código(s) duplicado(s) ignorado(s).`
-              : "")
+          (ignored > 0
+            ? ` ${ignored} código(s) duplicado(s) ignorado(s).`
+            : "")
         );
       } catch (error) {
         setMessage(
@@ -1060,7 +1136,107 @@ export default function ProductsModule() {
     reader.readAsText(file, "UTF-8");
   }
 
+  <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    {atividadeIntermediariaAtiva && (
+      <div
+
+        className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 p-5 shadow-sm"
+      >
+        <p className="text-xs font-bold uppercase tracking-wide text-amber-700">
+          Artesanatos Lucia’s · Atividade intermediária
+        </p>
+
+        <h2 className="mt-1 text-xl font-bold text-slate-900">
+          Quais produtos precisam de mais atenção?
+        </h2>
+
+        <p className="mt-2 text-sm leading-relaxed text-slate-700">
+          Cadastre produtos ou carregue os exemplos.
+          Depois, observe a classificação ABC e
+          identifique pelo menos um produto nas classes
+          A, B e C.
+        </p>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-4">
+          <ResumoAtividadeABC
+            titulo="Produtos"
+            valor={
+              resumoCurvaABC.totalProdutos
+            }
+            atingido={
+              resumoCurvaABC.totalProdutos >= 3
+            }
+          />
+
+          <ResumoAtividadeABC
+            titulo="Classe A"
+            valor={
+              resumoCurvaABC.quantidadeClasseA
+            }
+            atingido={
+              resumoCurvaABC.quantidadeClasseA >= 1
+            }
+          />
+
+          <ResumoAtividadeABC
+            titulo="Classe B"
+            valor={
+              resumoCurvaABC.quantidadeClasseB
+            }
+            atingido={
+              resumoCurvaABC.quantidadeClasseB >= 1
+            }
+          />
+
+          <ResumoAtividadeABC
+            titulo="Classe C"
+            valor={
+              resumoCurvaABC.quantidadeClasseC
+            }
+            atingido={
+              resumoCurvaABC.quantidadeClasseC >= 1
+            }
+          />
+        </div>
+
+        <p
+          className={`mt-4 rounded-xl px-4 py-3 text-sm font-bold ${resumoCurvaABC.possuiClassificacaoCompleta
+            ? "bg-emerald-100 text-emerald-800"
+            : "bg-white text-amber-900"
+            }`}
+        >
+          {resumoCurvaABC.possuiClassificacaoCompleta
+            ? "Objetivo atingido: as classes A, B e C estão representadas."
+            : "Objetivo em andamento: organize os produtos até obter as classes A, B e C."}
+        </p>
+      </div>
+    )}
+
+    <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex items-center gap-3">
+        <div className="rounded-xl bg-blue-100 p-3 text-blue-700">
+          <Package size={24} />
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold">
+            Gestão de produtos
+          </h2>
+
+          <p className="text-sm text-slate-500">
+            Cadastro, reposição e classificação ABC
+          </p>
+        </div>
+      </div>
+
+      {/* Mantenha aqui os botões de CSV existentes */}
+    </div>
+
+    {/* Mantenha aqui a mensagem existente */}
+  </div>
+
   return (
+
     <section className="mt-8 space-y-8">
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
@@ -1068,6 +1244,79 @@ export default function ProductsModule() {
             <div className="rounded-xl bg-blue-100 p-3 text-blue-700">
               <Package size={24} />
             </div>
+
+            {atividadeIntermediariaAtiva && (
+              <div
+                data-tour="atividade-curva-abc"
+                className="rounded-2xl border border-amber-300 bg-amber-50 p-5 shadow-sm"
+              >
+                <p className="text-xs font-bold uppercase tracking-wide text-amber-700">
+                  Artesanatos Lucia’s · Atividade intermediária
+                </p>
+
+                <h2 className="mt-1 text-xl font-bold text-slate-900">
+                  Quais produtos precisam de mais atenção?
+                </h2>
+
+                <p className="mt-2 text-sm leading-relaxed text-slate-700">
+                  Cadastre produtos ou carregue os exemplos.
+                  Depois, observe a classificação ABC e
+                  identifique pelo menos um produto nas
+                  classes A, B e C.
+                </p>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-4">
+                  <ResumoAtividadeABC
+                    titulo="Produtos"
+                    valor={resumoCurvaABC.totalProdutos}
+                    atingido={
+                      resumoCurvaABC.totalProdutos >= 3
+                    }
+                  />
+
+                  <ResumoAtividadeABC
+                    titulo="Classe A"
+                    valor={
+                      resumoCurvaABC.quantidadeClasseA
+                    }
+                    atingido={
+                      resumoCurvaABC.quantidadeClasseA >= 1
+                    }
+                  />
+
+                  <ResumoAtividadeABC
+                    titulo="Classe B"
+                    valor={
+                      resumoCurvaABC.quantidadeClasseB
+                    }
+                    atingido={
+                      resumoCurvaABC.quantidadeClasseB >= 1
+                    }
+                  />
+
+                  <ResumoAtividadeABC
+                    titulo="Classe C"
+                    valor={
+                      resumoCurvaABC.quantidadeClasseC
+                    }
+                    atingido={
+                      resumoCurvaABC.quantidadeClasseC >= 1
+                    }
+                  />
+                </div>
+
+                <p
+                  className={`mt-4 rounded-xl px-4 py-3 text-sm font-bold ${resumoCurvaABC.possuiClassificacaoCompleta
+                    ? "bg-emerald-100 text-emerald-800"
+                    : "bg-white text-amber-900"
+                    }`}
+                >
+                  {resumoCurvaABC.possuiClassificacaoCompleta
+                    ? "Objetivo atingido: as classes A, B e C estão representadas."
+                    : "Objetivo em andamento: organize os produtos até obter as classes A, B e C."}
+                </p>
+              </div>
+            )}
 
             <div>
               <h2 className="text-2xl font-bold">
@@ -1295,7 +1544,7 @@ export default function ProductsModule() {
           <button
             type="button"
             onClick={saveProduct}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600bold text-white hover:bg-blue-700"
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 font-bold text-white transition hover:bg-blue-700"
           >
             {editingId ? (
               <Save size={18} />
@@ -1309,6 +1558,7 @@ export default function ProductsModule() {
           </button>
 
           <button
+            data-tour="carregar-produtos-exemplo"
             type="button"
             onClick={loadExampleProducts}
             className="rounded-xl border border-slate-300 px-4 py-3 font-semibold text-slate-700 hover:bg-slate-50"
@@ -1354,22 +1604,20 @@ export default function ProductsModule() {
         </article>
 
         <article
-          className={`rounded-2xl border p-5 shadow-sm ${
-            totals.itensAbaixoReposicao > 0
-              ? "border-red-200 bg-red-50"
-              : "border-emerald-200 bg-emerald-50"
-          }`}
+          className={`rounded-2xl border p-5 shadow-sm ${totals.itensAbaixoReposicao > 0
+            ? "border-red-200 bg-red-50"
+            : "border-emerald-200 bg-emerald-50"
+            }`}
         >
           <p className="text-sm font-semibold text-slate-600">
             Abaixo do ponto de reposição
           </p>
 
           <p
-            className={`mt-2 text-3xl font-bold ${
-              totals.itensAbaixoReposicao > 0
-                ? "text-red-700"
-                : "text-emerald-700"
-            }`}
+            className={`mt-2 text-3xl font-bold ${totals.itensAbaixoReposicao > 0
+              ? "text-red-700"
+              : "text-emerald-700"
+              }`}
           >
             {totals.itensAbaixoReposicao}
           </p>
@@ -1377,7 +1625,10 @@ export default function ProductsModule() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2">
+        <div
+          data-tour="curva-abc"
+          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2"
+        >
           <div className="flex items-center gap-3">
             <div className="rounded-xl bg-violet-100 p-2.5 text-violet-700">
               <BarChart3 size={22} />
@@ -1436,7 +1687,7 @@ export default function ProductsModule() {
                         item.classe === "Classe A"
                           ? "#dc2626"
                           : item.classe ===
-                              "Classe B"
+                            "Classe B"
                             ? "#f59e0b"
                             : "#16a34a"
                       }
@@ -1601,14 +1852,13 @@ export default function ProductsModule() {
                     >
                       <td className="p-3">
                         <span
-                          className={`inline-flex h-9 w-9 items-center justify-center rounded-full font-bold text-white ${
-                            product.classeABC === "A"
-                              ? "bg-red-600"
-                              : product.classeABC ===
-                                  "B"
-                                ? "bg-amber-500"
-                                : "bg-emerald-600"
-                          }`}
+                          className={`inline-flex h-9 w-9 items-center justify-center rounded-full font-bold text-white ${product.classeABC === "A"
+                            ? "bg-red-600"
+                            : product.classeABC ===
+                              "B"
+                              ? "bg-amber-500"
+                              : "bg-emerald-600"
+                            }`}
                         >
                           {product.classeABC}
                         </span>
@@ -1710,5 +1960,36 @@ export default function ProductsModule() {
         )}
       </div>
     </section>
+  );
+}
+function ResumoAtividadeABC({
+  titulo,
+  valor,
+  atingido,
+}: {
+  titulo: string;
+  valor: number;
+  atingido: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-xl border p-3 ${atingido
+        ? "border-emerald-200 bg-emerald-100"
+        : "border-amber-200 bg-white"
+        }`}
+    >
+      <p className="text-xs font-semibold text-slate-600">
+        {titulo}
+      </p>
+
+      <p
+        className={`mt-1 text-2xl font-bold ${atingido
+          ? "text-emerald-700"
+          : "text-amber-800"
+          }`}
+      >
+        {valor}
+      </p>
+    </div>
   );
 }
