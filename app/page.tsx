@@ -41,6 +41,12 @@ import type {
   TutorialIntermediario,
 } from "@/data/tutoriais/intermediario";
 
+import RelatorioIntermediario, {
+  type DadosRelatorioIntermediario,
+} from "@/components/guia/intermediario/RelatorioIntermediario";
+
+
+
 type OperationData = {
   demanda: number;
   estoqueMedio: number;
@@ -791,6 +797,18 @@ export default function Home() {
     setAtividadeIntermediariaConcluida,
   ] = useState(false);
 
+  const [
+    relatorioIntermediario,
+    setRelatorioIntermediario,
+  ] = useState<DadosRelatorioIntermediario | null>(
+    null
+  );
+
+  const [
+    mostrarRelatorioIntermediario,
+    setMostrarRelatorioIntermediario,
+  ] = useState(false);
+
   useEffect(() => {
     try {
       const stored = localStorage.getItem(
@@ -964,6 +982,184 @@ export default function Home() {
     }, 150);
   }
 
+  function obterPistasUtilizadas(
+    tutorialId: IdTutorialIntermediario
+  ) {
+    const chaveProgresso =
+      "cenarilog-academy-v4-1-progresso-intermediario";
+
+    try {
+      const progressoSalvo =
+        localStorage.getItem(chaveProgresso);
+
+      if (!progressoSalvo) {
+        return 0;
+      }
+
+      const progresso = JSON.parse(
+        progressoSalvo
+      );
+
+      if (!Array.isArray(progresso)) {
+        return 0;
+      }
+
+      const registro = progresso.find(
+        (item) =>
+          item.tutorialId === tutorialId
+      );
+
+      return typeof registro?.pistasVisualizadas ===
+        "number"
+        ? registro.pistasVisualizadas
+        : 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  function criarIndicadoresRelatorio(
+    tutorialId: IdTutorialIntermediario
+  ): DadosRelatorioIntermediario["indicadores"] {
+    switch (tutorialId) {
+      case "pedidos-incompletos":
+        return [
+          {
+            nome: "OTD",
+            antes: currentKPIs.otd,
+            depois: simulatedKPIs.otd,
+            unidade: "%",
+          },
+          {
+            nome: "OTIF",
+            antes: currentKPIs.otif,
+            depois: simulatedKPIs.otif,
+            unidade: "%",
+          },
+        ];
+
+      case "falta-produtos":
+        return [
+          {
+            nome: "Fill Rate",
+            antes: currentKPIs.fillRate,
+            depois: simulatedKPIs.fillRate,
+            unidade: "%",
+          },
+          {
+            nome: "Ruptura",
+            antes: currentKPIs.ruptura,
+            depois: simulatedKPIs.ruptura,
+            unidade: "%",
+            menorMelhor: true,
+          },
+          {
+            nome: "Unidades atendidas",
+            antes: current.unidadesAtendidas,
+            depois: simulated.unidadesAtendidas,
+            unidade: "un.",
+          },
+        ];
+
+      case "hora-repor":
+        return [
+          {
+            nome: "Lead time",
+            antes: currentKPIs.leadTime,
+            depois: simulatedKPIs.leadTime,
+            unidade: "dias",
+            menorMelhor: true,
+          },
+          {
+            nome: "Estoque disponível",
+            antes: current.estoqueDisponivel,
+            depois: simulated.estoqueDisponivel,
+            unidade: "un.",
+          },
+          {
+            nome: "Ponto de reposição",
+            antes: currentKPIs.pontoReposicao,
+            depois: simulatedKPIs.pontoReposicao,
+            unidade: "un.",
+            menorMelhor: true,
+          },
+        ];
+
+      default:
+        return [];
+    }
+  }
+
+  function criarPontosFortes(
+    tutorialId: IdTutorialIntermediario
+  ) {
+    switch (tutorialId) {
+      case "pedidos-incompletos":
+        return [
+          "Você comparou OTD e OTIF.",
+          "Você identificou que prazo e completude são condições diferentes.",
+          "Você atingiu a meta de OTIF.",
+        ];
+
+      case "falta-produtos":
+        return [
+          "Você comparou unidades solicitadas e atendidas.",
+          "Você observou Fill Rate e ruptura em conjunto.",
+          "Você reduziu a falta de produtos no cenário.",
+        ];
+
+      case "hora-repor":
+        return [
+          "Você comparou estoque disponível e ponto de reposição.",
+          "Você analisou o efeito do prazo sobre a reposição.",
+          "Você encontrou uma condição adequada para a atividade.",
+        ];
+
+      default:
+        return [
+          "Você concluiu o problema proposto.",
+        ];
+    }
+  }
+
+  function criarPontosParaPraticar(
+    tutorialId: IdTutorialIntermediario,
+    pistasUtilizadas: number
+  ) {
+    const pontos =
+      pistasUtilizadas === 0
+        ? [
+          "Explique a solução com suas próprias palavras.",
+        ]
+        : [
+          "Repita a atividade usando menos pistas.",
+        ];
+
+    switch (tutorialId) {
+      case "pedidos-incompletos":
+        pontos.push(
+          "Observe como estoque, separação e conferência podem afetar o OTIF."
+        );
+        break;
+
+      case "falta-produtos":
+        pontos.push(
+          "Compare o ganho de atendimento com o possível aumento do estoque."
+        );
+        break;
+
+      case "hora-repor":
+        pontos.push(
+          "Teste diferentes valores de lead time, estoque e demanda diária."
+        );
+        break;
+    }
+
+    return pontos;
+  }
+
+
+
   function concluirProblemaIntermediario() {
     if (
       !atividadeIntermediaria ||
@@ -1028,8 +1224,54 @@ export default function Home() {
       return;
     }
 
+    const pistasUtilizadas =
+      obterPistasUtilizadas(
+        atividadeIntermediaria.id
+      );
+
+    const novoRelatorio: DadosRelatorioIntermediario = {
+      tutorial: atividadeIntermediaria,
+      concluidoEm: new Date().toISOString(),
+      indicadores: criarIndicadoresRelatorio(
+        atividadeIntermediaria.id
+      ),
+      pistasUtilizadas,
+      pontosFortes: criarPontosFortes(
+        atividadeIntermediaria.id
+      ),
+      pontosParaPraticar:
+        criarPontosParaPraticar(
+          atividadeIntermediaria.id,
+          pistasUtilizadas
+        ),
+      proximoTutorial:
+        atividadeIntermediaria.proximoTutorial,
+    };
+
+    setRelatorioIntermediario(novoRelatorio);
+    setMostrarRelatorioIntermediario(true);
+
+    localStorage.setItem(
+      "cenarilog-academy-v4-1-ultimo-relatorio",
+      JSON.stringify(novoRelatorio)
+    );
+
     setMessage(
       `Problema concluído: ${atividadeIntermediaria.titulo}.`
+    );
+  }
+
+  function repetirAtividadeIntermediaria() {
+    if (!atividadeIntermediaria) {
+      return;
+    }
+
+    setMostrarRelatorioIntermediario(false);
+    setRelatorioIntermediario(null);
+    setAtividadeIntermediariaConcluida(false);
+
+    iniciarProblemaIntermediario(
+      atividadeIntermediaria
     );
   }
 
@@ -1436,8 +1678,8 @@ export default function Home() {
 
                     <p
                       className={`mt-3 text-sm font-bold ${objetivoIntermediarioAtingido
-                          ? "text-emerald-700"
-                          : "text-amber-800"
+                        ? "text-emerald-700"
+                        : "text-amber-800"
                         }`}
                     >
                       {objetivoIntermediarioAtingido
@@ -2367,6 +2609,17 @@ export default function Home() {
         <footer className="py-8 text-center text-sm text-slate-500">
           CenariLog Academy · Aprenda logística simulando decisões.
         </footer>
+
+
+        <RelatorioIntermediario
+          aberto={mostrarRelatorioIntermediario}
+          dados={relatorioIntermediario}
+          aoFechar={() =>
+            setMostrarRelatorioIntermediario(false)
+          }
+          aoRepetir={repetirAtividadeIntermediaria}
+        />
+
       </div>
     </main>
   );
