@@ -855,18 +855,3 @@ O maior valor da ferramenta não está apenas em apresentar resultados. O valor 
 
 **CenariLog Academy**  
 *Aprenda logística simulando indicadores e decisões.*
-
-
-## Limitações conhecidas da versão 4.1
-
-### Impressão do relatório intermediário
-
-Ao utilizar a opção "Imprimir relatório", o navegador pode gerar
-páginas vazias adicionais por causa da combinação entre o modal,
-a página principal e os estilos de impressão.
-
-O conteúdo do relatório é gerado corretamente, mas pode ser
-necessário selecionar manualmente as páginas com conteúdo na janela
-de impressão.
-
-A correção completa ficará planejada para uma atualização futura.
