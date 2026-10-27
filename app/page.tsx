@@ -1,6 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   BarChart3,
   Calculator,
@@ -31,7 +36,9 @@ import {
   YAxis,
 } from "recharts";
 
-import ProductsModule from "@/components/ProductsModule";
+import ProductsModule, {
+  type ResumoCurvaABC,
+} from "@/components/ProductsModule";
 import MonthlySimulation from "../components/MonthlySimulation";
 import ChallengeOptimizer from "../components/ChallengeOptimizer";
 import GuiaInterativo from "@/components/guia/GuiaInterativo";
@@ -106,6 +113,16 @@ type LogSimBackup = {
   observations: string;
   savedScenarios: SavedScenario[];
 };
+
+const resumoCurvaABCInicial: ResumoCurvaABC = {
+  totalProdutos: 0,
+  quantidadeClasseA: 0,
+  quantidadeClasseB: 0,
+  quantidadeClasseC: 0,
+  valorAnualTotal: 0,
+  possuiClassificacaoCompleta: false,
+};
+
 
 const initialCurrent: OperationData = {
   demanda: 5000,
@@ -794,6 +811,13 @@ export default function Home() {
   ] = useState<TutorialIntermediario | null>(null);
 
   const [
+    resumoCurvaABC,
+    setResumoCurvaABC,
+  ] = useState<ResumoCurvaABC>(
+    resumoCurvaABCInicial
+  );
+
+  const [
     atividadeIntermediariaConcluida,
     setAtividadeIntermediariaConcluida,
   ] = useState(false);
@@ -823,6 +847,34 @@ export default function Home() {
       setMessage("Não foi possível carregar os cenários salvos.");
     }
   }, []);
+
+  const tratarAtualizacaoCurvaABC =
+    useCallback(
+      (novoResumo: ResumoCurvaABC) => {
+        setResumoCurvaABC(
+          (resumoAnterior) => {
+            const resumoNaoMudou =
+              resumoAnterior.totalProdutos ===
+              novoResumo.totalProdutos &&
+              resumoAnterior.quantidadeClasseA ===
+              novoResumo.quantidadeClasseA &&
+              resumoAnterior.quantidadeClasseB ===
+              novoResumo.quantidadeClasseB &&
+              resumoAnterior.quantidadeClasseC ===
+              novoResumo.quantidadeClasseC &&
+              resumoAnterior.valorAnualTotal ===
+              novoResumo.valorAnualTotal &&
+              resumoAnterior.possuiClassificacaoCompleta ===
+              novoResumo.possuiClassificacaoCompleta;
+
+            return resumoNaoMudou
+              ? resumoAnterior
+              : novoResumo;
+          }
+        );
+      },
+      []
+    );
 
   const currentKPIs = useMemo(
     () => calculateKPIs(current),
@@ -856,6 +908,15 @@ export default function Home() {
 
         case "hora-repor":
           return !simulatedKPIs.precisaRepor;
+
+        case "produtos-importantes":
+          return (
+            resumoCurvaABC.totalProdutos >= 3 &&
+            resumoCurvaABC.quantidadeClasseA >= 1 &&
+            resumoCurvaABC.quantidadeClasseB >= 1 &&
+            resumoCurvaABC.quantidadeClasseC >= 1 &&
+            resumoCurvaABC.possuiClassificacaoCompleta
+          );
 
         default:
           return false;
@@ -938,18 +999,39 @@ export default function Home() {
       cenariosIntermediarios[tutorial.id];
 
     if (!cenario) {
-      setMessage(
-        "Este problema será conectado ao módulo correspondente em uma próxima etapa."
-      );
+      if (
+        tutorial.id ===
+        "produtos-importantes"
+      ) {
+        setMessage(
+          "Analise a Curva ABC e identifique produtos nas classes A, B e C."
+        );
 
-      window.setTimeout(() => {
-        document
-          .querySelector('[data-tour="modulos-avancados"]')
-          ?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
-      }, 150);
+        setScenarioName(
+          `Artesanatos Lucia’s - ${tutorial.titulo}`
+        );
+
+        setObservations(
+          `Atividade intermediária: ${tutorial.titulo}\n\nObjetivo: ${tutorial.objetivo}`
+        );
+
+        window.setTimeout(() => {
+          document
+            .querySelector(
+              '[data-tour="atividade-curva-abc"]'
+            )
+            ?.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+            });
+        }, 150);
+
+        return;
+      }
+
+      setMessage(
+        "Este problema ainda não possui um cenário conectado."
+      );
 
       return;
     }
@@ -1086,6 +1168,45 @@ export default function Home() {
           },
         ];
 
+      case "produtos-importantes":
+        return [
+          {
+            nome: "Produtos analisados",
+            antes: 0,
+            depois:
+              resumoCurvaABC.totalProdutos,
+            unidade: "un.",
+          },
+          {
+            nome: "Produtos Classe A",
+            antes: 0,
+            depois:
+              resumoCurvaABC.quantidadeClasseA,
+            unidade: "un.",
+          },
+          {
+            nome: "Produtos Classe B",
+            antes: 0,
+            depois:
+              resumoCurvaABC.quantidadeClasseB,
+            unidade: "un.",
+          },
+          {
+            nome: "Produtos Classe C",
+            antes: 0,
+            depois:
+              resumoCurvaABC.quantidadeClasseC,
+            unidade: "un.",
+          },
+          {
+            nome: "Valor anual analisado",
+            antes: 0,
+            depois:
+              resumoCurvaABC.valorAnualTotal,
+            unidade: "R$",
+          },
+        ];
+
       default:
         return [];
     }
@@ -1114,6 +1235,13 @@ export default function Home() {
           "Você comparou estoque disponível e ponto de reposição.",
           "Você analisou o efeito do prazo sobre a reposição.",
           "Você encontrou uma condição adequada para a atividade.",
+        ];
+
+      case "produtos-importantes":
+        return [
+          "Você analisou os produtos pelo valor anual de consumo.",
+          "Você identificou produtos nas classes A, B e C.",
+          "Você reconheceu que produtos de maior impacto exigem acompanhamento mais próximo.",
         ];
 
       default:
@@ -1152,6 +1280,16 @@ export default function Home() {
       case "hora-repor":
         pontos.push(
           "Teste diferentes valores de lead time, estoque e demanda diária."
+        );
+        break;
+
+      case "produtos-importantes":
+        pontos.push(
+          "Teste diferentes demandas e custos para observar como a classificação ABC muda."
+        );
+
+        pontos.push(
+          "Lembre que um produto Classe C ainda pode ser importante para a operação."
         );
         break;
     }
@@ -2580,7 +2718,15 @@ export default function Home() {
         </section>
 
         <div data-tour="modulos-avancados">
-          <ProductsModule />
+          <ProductsModule
+            atividadeIntermediariaAtiva={
+              atividadeIntermediaria?.id ===
+              "produtos-importantes"
+            }
+            aoAtualizarCurvaABC={
+              tratarAtualizacaoCurvaABC
+            }
+          />
 
           <MonthlySimulation />
 
