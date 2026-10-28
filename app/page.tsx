@@ -848,6 +848,45 @@ export default function Home() {
     }
   }, []);
 
+  useEffect(() => {
+    try {
+      const atividadeSalva =
+        localStorage.getItem(
+          "cenarilog-academy-v4-1-atividade-atual"
+        );
+
+      if (!atividadeSalva) {
+        return;
+      }
+
+      const tutorialSalvo =
+        tutoriaisIntermediarios.find(
+          (tutorial) =>
+            tutorial.id === atividadeSalva
+        );
+
+      if (!tutorialSalvo) {
+        localStorage.removeItem(
+          "cenarilog-academy-v4-1-atividade-atual"
+        );
+
+        return;
+      }
+
+      setAtividadeIntermediaria(
+        tutorialSalvo
+      );
+
+      setAtividadeIntermediariaConcluida(
+        false
+      );
+    } catch {
+      setMessage(
+        "Não foi possível recuperar a atividade intermediária."
+      );
+    }
+  }, []);
+
   const tratarAtualizacaoCurvaABC =
     useCallback(
       (novoResumo: ResumoCurvaABC) => {
@@ -1879,11 +1918,28 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => {
-                    setAtividadeIntermediaria(null);
-                    setAtividadeIntermediariaConcluida(false);
+                    setAtividadeIntermediaria(
+                      null
+                    );
+
+                    setAtividadeIntermediariaConcluida(
+                      false
+                    );
+
+                    setRelatorioIntermediario(
+                      null
+                    );
+
+                    setMostrarRelatorioIntermediario(
+                      false
+                    );
 
                     localStorage.removeItem(
                       "cenarilog-academy-v4-1-atividade-atual"
+                    );
+
+                    setMessage(
+                      "Atividade intermediária encerrada."
                     );
                   }}
                   className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
