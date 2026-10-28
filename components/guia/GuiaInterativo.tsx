@@ -126,9 +126,17 @@ export default function GuiaInterativo({
   }, []);
 
   function abrirSeletorNivel() {
-    setMostrarConvite(false);
-    setRelatorio(null);
-    setMostrarSeletorNivel(true);
+    setMostrarConvite(
+      false
+    );
+
+    setRelatorio(
+      null
+    );
+
+    setMostrarSeletorNivel(
+      true
+    );
   }
 
   function iniciarNivelIniciante() {
