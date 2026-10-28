@@ -925,6 +925,7 @@ export default function Home() {
       atividadeIntermediaria,
       simulatedKPIs,
       targets,
+      resumoCurvaABC,
     ]);
 
 
@@ -995,6 +996,11 @@ export default function Home() {
     setAtividadeIntermediaria(tutorial);
     setAtividadeIntermediariaConcluida(false);
 
+    localStorage.setItem(
+      "cenarilog-academy-v4-1-atividade-atual",
+      tutorial.id
+    );
+
     const cenario =
       cenariosIntermediarios[tutorial.id];
 
@@ -1050,10 +1056,6 @@ export default function Home() {
 
     setMessage(cenario.mensagemInicial);
 
-    localStorage.setItem(
-      "cenarilog-academy-v4-1-atividade-atual",
-      tutorial.id
-    );
 
     window.setTimeout(() => {
       document
@@ -1833,69 +1835,6 @@ export default function Home() {
           <div className="mb-6 flex items-center justify-between gap-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
             <span>{message}</span>
 
-            {atividadeIntermediaria && (
-              <section className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 p-5 shadow-sm">
-                <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-amber-700">
-                      Artesanatos Lucia’s · Nível intermediário
-                    </p>
-
-                    <h2 className="mt-1 text-xl font-bold text-slate-900">
-                      {atividadeIntermediaria.titulo}
-                    </h2>
-
-                    <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-700">
-                      {atividadeIntermediaria.objetivo}
-                    </p>
-
-                    <p
-                      className={`mt-3 text-sm font-bold ${objetivoIntermediarioAtingido
-                        ? "text-emerald-700"
-                        : "text-amber-800"
-                        }`}
-                    >
-                      {objetivoIntermediarioAtingido
-                        ? "Objetivo atingido. Você pode concluir a atividade."
-                        : "Objetivo ainda não atingido. Analise os indicadores e teste uma mudança."}
-                    </p>
-                  </div>
-
-                  <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAtividadeIntermediaria(null);
-                        setAtividadeIntermediariaConcluida(false);
-
-                        localStorage.removeItem(
-                          "cenarilog-academy-v4-1-atividade-atual"
-                        );
-                      }}
-                      className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                    >
-                      Encerrar
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={concluirProblemaIntermediario}
-                      disabled={
-                        !objetivoIntermediarioAtingido ||
-                        atividadeIntermediariaConcluida
-                      }
-                      className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-                    >
-                      {atividadeIntermediariaConcluida
-                        ? "Atividade concluída"
-                        : "Concluir atividade"}
-                    </button>
-                  </div>
-                </div>
-              </section>
-            )}
-
-
             <button
               type="button"
               onClick={() => setMessage("")}
@@ -1906,6 +1845,75 @@ export default function Home() {
             </button>
           </div>
         )}
+
+
+        {atividadeIntermediaria && (
+          <section className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 p-5 shadow-sm">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide text-amber-700">
+                  Artesanatos Lucia’s · Nível intermediário
+                </p>
+
+                <h2 className="mt-1 text-xl font-bold text-slate-900">
+                  {atividadeIntermediaria.titulo}
+                </h2>
+
+                <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-700">
+                  {atividadeIntermediaria.objetivo}
+                </p>
+
+                <p
+                  className={`mt-3 text-sm font-bold ${objetivoIntermediarioAtingido
+                    ? "text-emerald-700"
+                    : "text-amber-800"
+                    }`}
+                >
+                  {objetivoIntermediarioAtingido
+                    ? "Objetivo atingido. Você pode concluir a atividade."
+                    : "Objetivo ainda não atingido. Analise os indicadores e teste uma mudança."}
+                </p>
+              </div>
+
+              <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAtividadeIntermediaria(null);
+                    setAtividadeIntermediariaConcluida(false);
+
+                    localStorage.removeItem(
+                      "cenarilog-academy-v4-1-atividade-atual"
+                    );
+                  }}
+                  className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Encerrar
+                </button>
+
+                <button
+                  type="button"
+                  onClick={
+                    concluirProblemaIntermediario
+                  }
+                  disabled={
+                    !objetivoIntermediarioAtingido ||
+                    atividadeIntermediariaConcluida
+                  }
+                  className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  {atividadeIntermediariaConcluida
+                    ? "Atividade concluída"
+                    : "Concluir atividade"}
+                </button>
+              </div>
+            </div>
+          </section>
+
+
+        )}
+
+
 
         <section className="grid gap-6 xl:grid-cols-2">
           <div
@@ -2813,6 +2821,6 @@ export default function Home() {
         />
 
       </div>
-    </main>
+    </main >
   );
 }
