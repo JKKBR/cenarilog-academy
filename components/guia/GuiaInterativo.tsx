@@ -100,12 +100,29 @@ export default function GuiaInterativo({
   ] = useState<TutorialIntermediario | null>(null);
 
   useEffect(() => {
-    const status =
-      localStorage.getItem(CHAVE_STATUS);
+    const statusGuia =
+      localStorage.getItem(
+        CHAVE_STATUS
+      );
 
-    if (!status) {
-      setMostrarConvite(true);
-    }
+    const atividadeIntermediaria =
+      localStorage.getItem(
+        "cenarilog-academy-v4-1-atividade-atual"
+      );
+
+    const progressoIntermediario =
+      localStorage.getItem(
+        "cenarilog-academy-v4-1-progresso-intermediario"
+      );
+
+    const usuarioJaIniciouAprendizagem =
+      Boolean(statusGuia) ||
+      Boolean(atividadeIntermediaria) ||
+      Boolean(progressoIntermediario);
+
+    setMostrarConvite(
+      !usuarioJaIniciouAprendizagem
+    );
   }, []);
 
   function abrirSeletorNivel() {
@@ -120,8 +137,22 @@ export default function GuiaInterativo({
   }
 
   function iniciarNivelIntermediario() {
-    setMostrarSeletorNivel(false);
-    setMostrarNivelIntermediario(true);
+    localStorage.setItem(
+      CHAVE_STATUS,
+      "intermediario-iniciado"
+    );
+
+    setMostrarConvite(
+      false
+    );
+
+    setMostrarSeletorNivel(
+      false
+    );
+
+    setMostrarNivelIntermediario(
+      true
+    );
   }
 
   function iniciarAtividadeIntermediaria(

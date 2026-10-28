@@ -1,6 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   BarChart3,
   Calculator,
@@ -31,15 +36,24 @@ import {
   YAxis,
 } from "recharts";
 
-import ProductsModule from "@/components/ProductsModule";
+import ProductsModule, {
+  type ResumoCurvaABC,
+} from "@/components/ProductsModule";
 import MonthlySimulation from "../components/MonthlySimulation";
 import ChallengeOptimizer from "../components/ChallengeOptimizer";
 import GuiaInterativo from "@/components/guia/GuiaInterativo";
 
-import type {
-  IdTutorialIntermediario,
-  TutorialIntermediario,
+import {
+  tutoriaisIntermediarios,
+  type IdTutorialIntermediario,
+  type TutorialIntermediario,
 } from "@/data/tutoriais/intermediario";
+
+import RelatorioIntermediario, {
+  type DadosRelatorioIntermediario,
+} from "@/components/guia/intermediario/RelatorioIntermediario";
+
+
 
 type OperationData = {
   demanda: number;
@@ -99,6 +113,16 @@ type LogSimBackup = {
   observations: string;
   savedScenarios: SavedScenario[];
 };
+
+const resumoCurvaABCInicial: ResumoCurvaABC = {
+  totalProdutos: 0,
+  quantidadeClasseA: 0,
+  quantidadeClasseB: 0,
+  quantidadeClasseC: 0,
+  valorAnualTotal: 0,
+  possuiClassificacaoCompleta: false,
+};
+
 
 const initialCurrent: OperationData = {
   demanda: 5000,
@@ -787,8 +811,27 @@ export default function Home() {
   ] = useState<TutorialIntermediario | null>(null);
 
   const [
+    resumoCurvaABC,
+    setResumoCurvaABC,
+  ] = useState<ResumoCurvaABC>(
+    resumoCurvaABCInicial
+  );
+
+  const [
     atividadeIntermediariaConcluida,
     setAtividadeIntermediariaConcluida,
+  ] = useState(false);
+
+  const [
+    relatorioIntermediario,
+    setRelatorioIntermediario,
+  ] = useState<DadosRelatorioIntermediario | null>(
+    null
+  );
+
+  const [
+    mostrarRelatorioIntermediario,
+    setMostrarRelatorioIntermediario,
   ] = useState(false);
 
   useEffect(() => {
@@ -804,6 +847,73 @@ export default function Home() {
       setMessage("Não foi possível carregar os cenários salvos.");
     }
   }, []);
+
+  useEffect(() => {
+    try {
+      const atividadeSalva =
+        localStorage.getItem(
+          "cenarilog-academy-v4-1-atividade-atual"
+        );
+
+      if (!atividadeSalva) {
+        return;
+      }
+
+      const tutorialSalvo =
+        tutoriaisIntermediarios.find(
+          (tutorial) =>
+            tutorial.id === atividadeSalva
+        );
+
+      if (!tutorialSalvo) {
+        localStorage.removeItem(
+          "cenarilog-academy-v4-1-atividade-atual"
+        );
+
+        return;
+      }
+
+      setAtividadeIntermediaria(
+        tutorialSalvo
+      );
+
+      setAtividadeIntermediariaConcluida(
+        false
+      );
+    } catch {
+      setMessage(
+        "Não foi possível recuperar a atividade intermediária."
+      );
+    }
+  }, []);
+
+  const tratarAtualizacaoCurvaABC =
+    useCallback(
+      (novoResumo: ResumoCurvaABC) => {
+        setResumoCurvaABC(
+          (resumoAnterior) => {
+            const resumoNaoMudou =
+              resumoAnterior.totalProdutos ===
+              novoResumo.totalProdutos &&
+              resumoAnterior.quantidadeClasseA ===
+              novoResumo.quantidadeClasseA &&
+              resumoAnterior.quantidadeClasseB ===
+              novoResumo.quantidadeClasseB &&
+              resumoAnterior.quantidadeClasseC ===
+              novoResumo.quantidadeClasseC &&
+              resumoAnterior.valorAnualTotal ===
+              novoResumo.valorAnualTotal &&
+              resumoAnterior.possuiClassificacaoCompleta ===
+              novoResumo.possuiClassificacaoCompleta;
+
+            return resumoNaoMudou
+              ? resumoAnterior
+              : novoResumo;
+          }
+        );
+      },
+      []
+    );
 
   const currentKPIs = useMemo(
     () => calculateKPIs(current),
@@ -838,6 +948,15 @@ export default function Home() {
         case "hora-repor":
           return !simulatedKPIs.precisaRepor;
 
+        case "produtos-importantes":
+          return (
+            resumoCurvaABC.totalProdutos >= 3 &&
+            resumoCurvaABC.quantidadeClasseA >= 1 &&
+            resumoCurvaABC.quantidadeClasseB >= 1 &&
+            resumoCurvaABC.quantidadeClasseC >= 1 &&
+            resumoCurvaABC.possuiClassificacaoCompleta
+          );
+
         default:
           return false;
       }
@@ -845,6 +964,7 @@ export default function Home() {
       atividadeIntermediaria,
       simulatedKPIs,
       targets,
+      resumoCurvaABC,
     ]);
 
 
@@ -915,22 +1035,48 @@ export default function Home() {
     setAtividadeIntermediaria(tutorial);
     setAtividadeIntermediariaConcluida(false);
 
+    localStorage.setItem(
+      "cenarilog-academy-v4-1-atividade-atual",
+      tutorial.id
+    );
+
     const cenario =
       cenariosIntermediarios[tutorial.id];
 
     if (!cenario) {
-      setMessage(
-        "Este problema será conectado ao módulo correspondente em uma próxima etapa."
-      );
+      if (
+        tutorial.id ===
+        "produtos-importantes"
+      ) {
+        setMessage(
+          "Analise a Curva ABC e identifique produtos nas classes A, B e C."
+        );
 
-      window.setTimeout(() => {
-        document
-          .querySelector('[data-tour="modulos-avancados"]')
-          ?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
-      }, 150);
+        setScenarioName(
+          `Artesanatos Lucia’s - ${tutorial.titulo}`
+        );
+
+        setObservations(
+          `Atividade intermediária: ${tutorial.titulo}\n\nObjetivo: ${tutorial.objetivo}`
+        );
+
+        window.setTimeout(() => {
+          document
+            .querySelector(
+              '[data-tour="atividade-curva-abc"]'
+            )
+            ?.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+            });
+        }, 150);
+
+        return;
+      }
+
+      setMessage(
+        "Este problema ainda não possui um cenário conectado."
+      );
 
       return;
     }
@@ -949,10 +1095,6 @@ export default function Home() {
 
     setMessage(cenario.mensagemInicial);
 
-    localStorage.setItem(
-      "cenarilog-academy-v4-1-atividade-atual",
-      tutorial.id
-    );
 
     window.setTimeout(() => {
       document
@@ -963,6 +1105,240 @@ export default function Home() {
         });
     }, 150);
   }
+
+  function obterPistasUtilizadas(
+    tutorialId: IdTutorialIntermediario
+  ) {
+    const chaveProgresso =
+      "cenarilog-academy-v4-1-progresso-intermediario";
+
+    try {
+      const progressoSalvo =
+        localStorage.getItem(chaveProgresso);
+
+      if (!progressoSalvo) {
+        return 0;
+      }
+
+      const progresso = JSON.parse(
+        progressoSalvo
+      );
+
+      if (!Array.isArray(progresso)) {
+        return 0;
+      }
+
+      const registro = progresso.find(
+        (item) =>
+          item.tutorialId === tutorialId
+      );
+
+      return typeof registro?.pistasVisualizadas ===
+        "number"
+        ? registro.pistasVisualizadas
+        : 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  function criarIndicadoresRelatorio(
+    tutorialId: IdTutorialIntermediario
+  ): DadosRelatorioIntermediario["indicadores"] {
+    switch (tutorialId) {
+      case "pedidos-incompletos":
+        return [
+          {
+            nome: "OTD",
+            antes: currentKPIs.otd,
+            depois: simulatedKPIs.otd,
+            unidade: "%",
+          },
+          {
+            nome: "OTIF",
+            antes: currentKPIs.otif,
+            depois: simulatedKPIs.otif,
+            unidade: "%",
+          },
+        ];
+
+      case "falta-produtos":
+        return [
+          {
+            nome: "Fill Rate",
+            antes: currentKPIs.fillRate,
+            depois: simulatedKPIs.fillRate,
+            unidade: "%",
+          },
+          {
+            nome: "Ruptura",
+            antes: currentKPIs.ruptura,
+            depois: simulatedKPIs.ruptura,
+            unidade: "%",
+            menorMelhor: true,
+          },
+          {
+            nome: "Unidades atendidas",
+            antes: current.unidadesAtendidas,
+            depois: simulated.unidadesAtendidas,
+            unidade: "un.",
+          },
+        ];
+
+      case "hora-repor":
+        return [
+          {
+            nome: "Lead time",
+            antes: currentKPIs.leadTime,
+            depois: simulatedKPIs.leadTime,
+            unidade: "dias",
+            menorMelhor: true,
+          },
+          {
+            nome: "Estoque disponível",
+            antes: current.estoqueDisponivel,
+            depois: simulated.estoqueDisponivel,
+            unidade: "un.",
+          },
+          {
+            nome: "Ponto de reposição",
+            antes: currentKPIs.pontoReposicao,
+            depois: simulatedKPIs.pontoReposicao,
+            unidade: "un.",
+            menorMelhor: true,
+          },
+        ];
+
+      case "produtos-importantes":
+        return [
+          {
+            nome: "Produtos analisados",
+            antes: 0,
+            depois:
+              resumoCurvaABC.totalProdutos,
+            unidade: "un.",
+          },
+          {
+            nome: "Produtos Classe A",
+            antes: 0,
+            depois:
+              resumoCurvaABC.quantidadeClasseA,
+            unidade: "un.",
+          },
+          {
+            nome: "Produtos Classe B",
+            antes: 0,
+            depois:
+              resumoCurvaABC.quantidadeClasseB,
+            unidade: "un.",
+          },
+          {
+            nome: "Produtos Classe C",
+            antes: 0,
+            depois:
+              resumoCurvaABC.quantidadeClasseC,
+            unidade: "un.",
+          },
+          {
+            nome: "Valor anual analisado",
+            antes: 0,
+            depois:
+              resumoCurvaABC.valorAnualTotal,
+            unidade: "R$",
+          },
+        ];
+
+      default:
+        return [];
+    }
+  }
+
+  function criarPontosFortes(
+    tutorialId: IdTutorialIntermediario
+  ) {
+    switch (tutorialId) {
+      case "pedidos-incompletos":
+        return [
+          "Você comparou OTD e OTIF.",
+          "Você identificou que prazo e completude são condições diferentes.",
+          "Você atingiu a meta de OTIF.",
+        ];
+
+      case "falta-produtos":
+        return [
+          "Você comparou unidades solicitadas e atendidas.",
+          "Você observou Fill Rate e ruptura em conjunto.",
+          "Você reduziu a falta de produtos no cenário.",
+        ];
+
+      case "hora-repor":
+        return [
+          "Você comparou estoque disponível e ponto de reposição.",
+          "Você analisou o efeito do prazo sobre a reposição.",
+          "Você encontrou uma condição adequada para a atividade.",
+        ];
+
+      case "produtos-importantes":
+        return [
+          "Você analisou os produtos pelo valor anual de consumo.",
+          "Você identificou produtos nas classes A, B e C.",
+          "Você reconheceu que produtos de maior impacto exigem acompanhamento mais próximo.",
+        ];
+
+      default:
+        return [
+          "Você concluiu o problema proposto.",
+        ];
+    }
+  }
+
+  function criarPontosParaPraticar(
+    tutorialId: IdTutorialIntermediario,
+    pistasUtilizadas: number
+  ) {
+    const pontos =
+      pistasUtilizadas === 0
+        ? [
+          "Explique a solução com suas próprias palavras.",
+        ]
+        : [
+          "Repita a atividade usando menos pistas.",
+        ];
+
+    switch (tutorialId) {
+      case "pedidos-incompletos":
+        pontos.push(
+          "Observe como estoque, separação e conferência podem afetar o OTIF."
+        );
+        break;
+
+      case "falta-produtos":
+        pontos.push(
+          "Compare o ganho de atendimento com o possível aumento do estoque."
+        );
+        break;
+
+      case "hora-repor":
+        pontos.push(
+          "Teste diferentes valores de lead time, estoque e demanda diária."
+        );
+        break;
+
+      case "produtos-importantes":
+        pontos.push(
+          "Teste diferentes demandas e custos para observar como a classificação ABC muda."
+        );
+
+        pontos.push(
+          "Lembre que um produto Classe C ainda pode ser importante para a operação."
+        );
+        break;
+    }
+
+    return pontos;
+  }
+
+
 
   function concluirProblemaIntermediario() {
     if (
@@ -1028,8 +1404,88 @@ export default function Home() {
       return;
     }
 
+    const pistasUtilizadas =
+      obterPistasUtilizadas(
+        atividadeIntermediaria.id
+      );
+
+    const novoRelatorio: DadosRelatorioIntermediario = {
+      tutorial: atividadeIntermediaria,
+      concluidoEm: new Date().toISOString(),
+      indicadores: criarIndicadoresRelatorio(
+        atividadeIntermediaria.id
+      ),
+      pistasUtilizadas,
+      pontosFortes: criarPontosFortes(
+        atividadeIntermediaria.id
+      ),
+      pontosParaPraticar:
+        criarPontosParaPraticar(
+          atividadeIntermediaria.id,
+          pistasUtilizadas
+        ),
+      proximoTutorial:
+        atividadeIntermediaria.proximoTutorial,
+    };
+
+    setRelatorioIntermediario(novoRelatorio);
+    setMostrarRelatorioIntermediario(true);
+
+    localStorage.setItem(
+      "cenarilog-academy-v4-1-ultimo-relatorio",
+      JSON.stringify(novoRelatorio)
+    );
+
     setMessage(
       `Problema concluído: ${atividadeIntermediaria.titulo}.`
+    );
+  }
+
+  function repetirAtividadeIntermediaria() {
+    if (!atividadeIntermediaria) {
+      return;
+    }
+
+    setMostrarRelatorioIntermediario(false);
+    setRelatorioIntermediario(null);
+    setAtividadeIntermediariaConcluida(false);
+
+    iniciarProblemaIntermediario(
+      atividadeIntermediaria
+    );
+  }
+
+  function abrirProximoProblemaIntermediario(
+    tutorialId: IdTutorialIntermediario
+  ) {
+    const proximoTutorial =
+      tutoriaisIntermediarios.find(
+        (tutorial) =>
+          tutorial.id === tutorialId
+      );
+
+    if (!proximoTutorial) {
+      setMessage(
+        "O próximo problema não foi encontrado."
+      );
+
+      return;
+    }
+
+    setMostrarRelatorioIntermediario(
+      false
+    );
+
+    setRelatorioIntermediario(
+      null
+    );
+
+    setAtividadeIntermediariaConcluida(
+      false
+    );
+
+    iniciarProblemaIntermediario(
+      proximoTutorial
     );
   }
 
@@ -1418,69 +1874,6 @@ export default function Home() {
           <div className="mb-6 flex items-center justify-between gap-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
             <span>{message}</span>
 
-            {atividadeIntermediaria && (
-              <section className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 p-5 shadow-sm">
-                <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-amber-700">
-                      Artesanatos Lucia’s · Nível intermediário
-                    </p>
-
-                    <h2 className="mt-1 text-xl font-bold text-slate-900">
-                      {atividadeIntermediaria.titulo}
-                    </h2>
-
-                    <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-700">
-                      {atividadeIntermediaria.objetivo}
-                    </p>
-
-                    <p
-                      className={`mt-3 text-sm font-bold ${objetivoIntermediarioAtingido
-                          ? "text-emerald-700"
-                          : "text-amber-800"
-                        }`}
-                    >
-                      {objetivoIntermediarioAtingido
-                        ? "Objetivo atingido. Você pode concluir a atividade."
-                        : "Objetivo ainda não atingido. Analise os indicadores e teste uma mudança."}
-                    </p>
-                  </div>
-
-                  <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAtividadeIntermediaria(null);
-                        setAtividadeIntermediariaConcluida(false);
-
-                        localStorage.removeItem(
-                          "cenarilog-academy-v4-1-atividade-atual"
-                        );
-                      }}
-                      className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                    >
-                      Encerrar
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={concluirProblemaIntermediario}
-                      disabled={
-                        !objetivoIntermediarioAtingido ||
-                        atividadeIntermediariaConcluida
-                      }
-                      className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-                    >
-                      {atividadeIntermediariaConcluida
-                        ? "Atividade concluída"
-                        : "Concluir atividade"}
-                    </button>
-                  </div>
-                </div>
-              </section>
-            )}
-
-
             <button
               type="button"
               onClick={() => setMessage("")}
@@ -1491,6 +1884,92 @@ export default function Home() {
             </button>
           </div>
         )}
+
+
+        {atividadeIntermediaria && (
+          <section className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 p-5 shadow-sm">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide text-amber-700">
+                  Artesanatos Lucia’s · Nível intermediário
+                </p>
+
+                <h2 className="mt-1 text-xl font-bold text-slate-900">
+                  {atividadeIntermediaria.titulo}
+                </h2>
+
+                <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-700">
+                  {atividadeIntermediaria.objetivo}
+                </p>
+
+                <p
+                  className={`mt-3 text-sm font-bold ${objetivoIntermediarioAtingido
+                    ? "text-emerald-700"
+                    : "text-amber-800"
+                    }`}
+                >
+                  {objetivoIntermediarioAtingido
+                    ? "Objetivo atingido. Você pode concluir a atividade."
+                    : "Objetivo ainda não atingido. Analise os indicadores e teste uma mudança."}
+                </p>
+              </div>
+
+              <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAtividadeIntermediaria(
+                      null
+                    );
+
+                    setAtividadeIntermediariaConcluida(
+                      false
+                    );
+
+                    setRelatorioIntermediario(
+                      null
+                    );
+
+                    setMostrarRelatorioIntermediario(
+                      false
+                    );
+
+                    localStorage.removeItem(
+                      "cenarilog-academy-v4-1-atividade-atual"
+                    );
+
+                    setMessage(
+                      "Atividade intermediária encerrada."
+                    );
+                  }}
+                  className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Encerrar
+                </button>
+
+                <button
+                  type="button"
+                  onClick={
+                    concluirProblemaIntermediario
+                  }
+                  disabled={
+                    !objetivoIntermediarioAtingido ||
+                    atividadeIntermediariaConcluida
+                  }
+                  className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  {atividadeIntermediariaConcluida
+                    ? "Atividade concluída"
+                    : "Concluir atividade"}
+                </button>
+              </div>
+            </div>
+          </section>
+
+
+        )}
+
+
 
         <section className="grid gap-6 xl:grid-cols-2">
           <div
@@ -2303,7 +2782,15 @@ export default function Home() {
         </section>
 
         <div data-tour="modulos-avancados">
-          <ProductsModule />
+          <ProductsModule
+            atividadeIntermediariaAtiva={
+              atividadeIntermediaria?.id ===
+              "produtos-importantes"
+            }
+            aoAtualizarCurvaABC={
+              tratarAtualizacaoCurvaABC
+            }
+          />
 
           <MonthlySimulation />
 
@@ -2367,7 +2854,29 @@ export default function Home() {
         <footer className="py-8 text-center text-sm text-slate-500">
           CenariLog Academy · Aprenda logística simulando decisões.
         </footer>
+
+
+        <RelatorioIntermediario
+          aberto={
+            mostrarRelatorioIntermediario
+          }
+          dados={
+            relatorioIntermediario
+          }
+          aoFechar={() => {
+            setMostrarRelatorioIntermediario(
+              false
+            );
+          }}
+          aoRepetir={
+            repetirAtividadeIntermediaria
+          }
+          aoAbrirProximo={
+            abrirProximoProblemaIntermediario
+          }
+        />
+
       </div>
-    </main>
+    </main >
   );
 }
